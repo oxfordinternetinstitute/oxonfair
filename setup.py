@@ -51,8 +51,8 @@ def default_setup_args(*, version):
         name=name,
         version=version,
         author="AutoGluon Community",
-        url="https://github.com/autogluon/autogluon-fair",
-        description="AutoML Framework for evaluating ML model fairness metrics",
+        url="https://github.com/ChrisMRuss/oxon-fair/",
+        description="AutoML Framework for evaluating and enforcing ML model fairness",
         long_description=long_description,
         long_description_content_type="text/markdown",
         license="Apache-2.0",
@@ -65,9 +65,6 @@ def default_setup_args(*, version):
         include_package_data=True,
         python_requires=PYTHON_REQUIRES,
         package_data={
-            AUTOGLUON: [
-                "LICENSE",
-            ]
         },
         classifiers=[
             "Development Status :: 4 - Beta",
@@ -93,24 +90,19 @@ def default_setup_args(*, version):
             "Topic :: Scientific/Engineering :: Image Recognition",
         ],
         project_urls={
-            "Documentation": "https://auto.gluon.ai",
-            "Bug Reports": "https://github.com/autogluon/autogluon-fair/issues",
-            "Source": "https://github.com/autogluon/autogluon-fair/",
-            "Contribute!": "https://github.com/autogluon/autogluon-fair/blob/master/CONTRIBUTING.md",
+            "Documentation": "https://github.com/ChrisMRuss/oxon-fair/",
+            "Bug Reports": "https://github.com/ChrisMRuss/oxon-fair/issues",
+            "Source": "https://github.com/ChrisMRuss/oxon-fair/",
+            "Contribute!": "https://github.com/ChrisMRuss/oxon-fair/blob/master/CONTRIBUTING.md",
         },
     )
     return setup_args
 
 
-version = "0.1"
+version = "0.2"
 version = update_version(version, use_file_if_exists=False, create_file=True)
-AUTOGLUON_VERSION_RANGE = ">=0.7,<1.0"
 
 install_requires = [
-    f'{AUTOGLUON}.common{AUTOGLUON_VERSION_RANGE}',
-    f'{AUTOGLUON}.core{AUTOGLUON_VERSION_RANGE}',
-    f'{AUTOGLUON}.tabular[all]{AUTOGLUON_VERSION_RANGE}',
-    f'{AUTOGLUON}.features{AUTOGLUON_VERSION_RANGE}',
     "numpy>=1.21.4,<2.0",
     "pandas>=1.2.5,<2.0",
 ]
