@@ -5,9 +5,9 @@ The toolkit is designed to overcome a range of shortcomings in existing fairness
 
 For low capacity models (e.g. linear regression, and decision-trees of limited depth), we recomend [fairlearn](https://github.com/fairlearn/fairlearn).
 
-We support a range of complex classifiers including [scikit learn](https://scikit-learn.org/stable/), ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html), and [pytorch](https://pytorch.org/). 
+We support a range of complex classifiers including [scikit learn](https://scikit-learn.org/stable/) (TODO!), ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html), and [pytorch](https://pytorch.org/) (TODO!). 
 
-It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively being maintained.
+It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
 ## Instructions
 
@@ -19,7 +19,7 @@ or install it with the command `pip install autogluon.fair` .
 
 To install from source.
  1. Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
- 2. Download the source of autogluon.fair and in the source directory run:
+ 2. Download the source of oxonfair and in the source directory run:
     python3 -m pip install -e .
 
 Now run the [Example Notebook](examples/quickstart_fair.ipynb) or try some of the example below.
