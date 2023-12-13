@@ -2,9 +2,9 @@
 import numpy as np
 from autogluon.tabular import TabularDataset, TabularPredictor
 from autogluon.core import metrics
-from autogluon import fair
-from autogluon.fair.learners.fair import FairPredictor
-from autogluon.fair.utils import group_metrics as gm
+import oxonfair as fair
+from oxonfair import FairPredictor
+from oxonfair.utils import group_metrics as gm
 
 
 def test_metrics():
