@@ -2,17 +2,16 @@ import os
 
 from setuptools import setup
 
-AUTOGLUON = "autogluon"
-FAIR = "fair"
+FAIR = "oxonfair"
 
-PYTHON_REQUIRES = ">=3.8, <3.11"
+PYTHON_REQUIRES = ">=3.8"
 
 
 def create_version_file(*, version):
     print("-- Building version " + version)
-    version_path = os.path.join("src", AUTOGLUON, FAIR, "version.py")
+    version_path = os.path.join("src", FAIR, "version.py")
     with open(version_path, "w") as f:
-        f.write(f'"""This is the {AUTOGLUON}.{FAIR} version file."""\n')
+        f.write(f'"""This is the {FAIR} version file."""\n')
         f.write("__version__ = '{}'\n".format(version))
 
 
@@ -46,11 +45,11 @@ def default_setup_args(*, version):
     from setuptools import find_packages
 
     long_description = open("README.md").read()
-    name = f"{AUTOGLUON}.{FAIR}"
+    name = f"{FAIR}"
     setup_args = dict(
         name=name,
         version=version,
-        author="AutoGluon Community",
+        author="Governance of Emerging Technologies Programme (Oxford Internet Insitute)",
         url="https://github.com/ChrisMRuss/oxon-fair/",
         description="AutoML Framework for evaluating and enforcing ML model fairness",
         long_description=long_description,
@@ -60,7 +59,7 @@ def default_setup_args(*, version):
         # Package info
         packages=find_packages("src"),
         package_dir={"": "src"},
-        namespace_packages=[AUTOGLUON],
+        namespace_packages=[],
         zip_safe=True,
         include_package_data=True,
         python_requires=PYTHON_REQUIRES,
