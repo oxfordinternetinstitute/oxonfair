@@ -1,6 +1,6 @@
 #Comparision of oxonfair with fairlearn for decision trees, random forest, and boosting.
 
-for i in range(4,5):
+for i in range(5):
     switch=['tree','forest','boost','boost_extended','SVM'][i]
     if switch == 'tree':
         import sklearn.tree
