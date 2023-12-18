@@ -4,9 +4,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.base import is_classifier
 
-from autogluon.core.metrics import Scorer
-from autogluon.tabular import TabularPredictor
+auto_gluon_exists=True
+try:
+    from autogluon.core.metrics import Scorer
+    from autogluon.tabular import TabularPredictor
+except ModuleNotFoundError:
+    auto_gluon_exists = False
+    pass
+
 from ..utils import group_metrics
 from ..utils.group_metric_classes import BaseGroupMetric
 from . import efficient_compute, fair_frontier
@@ -14,19 +21,31 @@ logger = logging.getLogger(__name__)
 
 
 class FairPredictor:
-    """Assess and mitigate the fairness and effectiveness of a autogluon binary predictor post-fit
+    """Assess and mitigate the unfairness and effectiveness of a autogluon binary predictor post-fit
     by computing group specific metrics, and performing threshold adjustment.
     Parameters
     ----------
-    predictor: an autogluon binary  predictor that will be modified
-    validation_data: a dataframe that can be read by predictor.
+    predictor: a binary  predictor that will be evaluated and modified. This can be:
+        1. An autogluon binary predictor.
+        2. A sklearn classifier.
+        3. An arbitary function 
+        4. The value None. 
+        If None  is used, we assume that we are rescoring predictions already made elsewhere, and the validation data
+        should be a copy of the classifier outputs.
+    validation_data: This can be:
+        1. a pandas dataframe that can be read by predictor.
+        2. a dict contain mutliple entries
+            'data' containing a pandas dataframe or numpy array to be fed to the classifier.
+            'target' the ground truth-labels used to evaluate classifier peformance.
+            'groups' (optional)  
     groups (optional, default None): is an indicator of protected attributes, i.e.  the discrete groups used to measure
     fairness
     it may be:
         1. The name of a pandas column containing discrete values
         2. a vector of the same size as the validation set containing discrete values
         3. The value None   (used when we don't require groups, for example,
-               if we are optimizing F1 without per-group thresholds)
+               if we are optimizing F1 without per-group thresholds, or if groups are explicitly specified by a dict in
+               validation data)
     inferred_groups: (Optional, default False) A binary or multiclass autogluon predictor that infers the protected
                                 attributes.
         This can be used to enforce fairness when no information about protected attribtutes is
@@ -38,11 +57,16 @@ class FairPredictor:
     If use_fast is False, autogluon scorers are also supported.
     """
 
-    def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
+    def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False, add_noise=False,
                  use_fast=True) -> None:
+        if predictor is None:
+            predictor = lambda x: x
 
-        if predictor.problem_type != 'binary':
+        if not (is_not_autogluon(predictor)) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
+        
+        #Check if sklearn
+        _guard_predictor_data_match(validation_data,predictor)
         self.predictor = predictor
         if groups is None:
             groups = False
@@ -52,12 +76,21 @@ class FairPredictor:
         # However, as a user interface groups = None makes more sense for instantiation.
         self.groups = groups
         self.use_fast: bool = use_fast
-        self.validation_data = validation_data
-        validation_labels = self.validation_data[predictor.label]
+        if isinstance(validation_data,dict):
+            self.validation_data=validation_data['data']
+            validation_labels=validation_data['target']
+            if groups is False:
+                groups = self.validation_data.get('groups', False)
+            else:
+                if validation_data.get('groups', False):
+                    logger.warn('Groups passed twice to fairpredictor both as part of the dataset and as an argument. The argument will be used.')
+        else:
+            self.validation_data = validation_data
+            validation_labels = self.validation_data[predictor.label]
 
         # We use _internal_groups as a standardized argument that is always safe to pass
         # to functions expecting a vector
-        self._internal_groups = self.groups_to_numpy(groups, validation_data)
+        self._internal_groups = self.groups_to_numpy(groups, self.validation_data)
 
         if self._internal_groups.shape[0] != validation_labels.shape[0]:
             logger.error('The size of the groups does not match the dataset size')
@@ -73,7 +106,13 @@ class FairPredictor:
                 self._internal_groups.reshape(-1, 1)).toarray()
 
         self.proba = np.asarray(predictor.predict_proba(self.validation_data))
-        self.y_true = np.asarray(validation_labels == self.predictor.class_labels[1])
+        self.add_noise = add_noise
+        if add_noise:
+            self.proba += np.random.normal(0,add_noise,self.proba.shape)
+        if is_not_autogluon(self.predictor):
+            self.y_true = np.asarray(validation_labels)
+        else:
+            self.y_true = np.asarray(validation_labels == self.predictor.class_labels[1])
         self.frontier = None
         if self.use_fast:
             self.offset = np.zeros((self._val_thresholds.shape[1],))
@@ -83,22 +122,29 @@ class FairPredictor:
         self.objective2 = None
         self.round = False
 
-    def groups_to_numpy(self, groups, data: pd.DataFrame) -> np.ndarray:
+    def groups_to_numpy(self, groups, data) -> np.ndarray:
         """helper function for transforming groups into a numpy array of unique values
         parameters
         ----------
         groups: one of the standard represenations of groups (see class doc)
-        data: a pandas dataframe
+        data: a pandas dataframe or a dict containing data
         returns
         -------
         numpy array
         """
+        if groups is None and isinstance(data, dict):
+                groups=data.get('groups', None)
         if groups is None:
             groups = self.groups
+        if isinstance(data, dict):
+            data=data['data']
         if callable(groups):
             return groups(data).argmax(1)
         if isinstance(groups, str):
             return np.asarray(data[groups])
+        if  isinstance(groups,int):
+            return np.asarray(data[:,groups])
+
         if groups is False:
             return np.zeros(data.shape[0])
         return groups
@@ -243,6 +289,7 @@ class FairPredictor:
             color: (optional, default None) Specify the color the frontier should be plotted in. 
             new_plot: (optional, default True) specifies if plt.figure() should be called at the start or if an existing plot should be overlayed
         """
+        _guard_predictor_data_match(data,self.predictor)
         if self.frontier is None:
             logger.error('Call fit before plot_frontier')
 
@@ -261,9 +308,16 @@ class FairPredictor:
             groups = self.groups_to_numpy(groups, data)
             val_thresholds = self._val_thresholds
         else:
-            labels = np.asarray(data[self.predictor.label])
-            proba = np.asarray(self.predictor.predict_proba(data))
-            labels = (labels == self.predictor.positive_class) * 1
+            if isinstance(data,dict):
+                labels = data['target']
+                proba = np.asarray(self.predictor.predict_proba(data['data']))
+            else:
+                labels = np.asarray(data[self.predictor.label])
+                proba = np.asarray(self.predictor.predict_proba(data))
+                labels = (labels == self.predictor.positive_class) * 1
+            if self.add_noise:
+                proba += np.random.normal(0,self.add_noise,proba.shape)
+
             groups = self.groups_to_numpy(groups, data)
 
             if self.inferred_groups is False:
@@ -335,17 +389,21 @@ class FairPredictor:
         a pandas dataset containing rows indexed by metric name, and columns by
         ['original', 'updated']
          """
+        _guard_predictor_data_match(data,self.predictor)
         if metrics is None:
             metrics = group_metrics.ag_metrics
 
         groups = None
         if data is not None:
-            groups = np.ones(data.shape[0])
+            if isinstance(data,dict):
+                groups = np.ones(data['data'].shape[0])
+            else:
+                groups = np.ones(data.shape[0])
 
         return self.evaluate_fairness(data, groups, metrics=metrics, verbose=verbose)
 
     def evaluate_fairness(self, data=None, groups=None, *, metrics=None, verbose=False) -> pd.DataFrame:
-        """Compute standard fairness metrics of the orginal predictor and the new predictor
+        """Compute standard fairness metrics for the orginal predictor and the new predictor
          found by fit. If fit has not been called return a dataframe containing
          only the metrics of the original predictor.
          parameters
@@ -363,6 +421,8 @@ class FairPredictor:
         a pandas dataset containing rows indexed by fairness measure name, and columns by
         ['original', 'updated']
          """
+        _guard_predictor_data_match(data,self.predictor)
+
         if metrics is None:
             metrics = group_metrics.clarify_metrics
 
@@ -371,9 +431,14 @@ class FairPredictor:
             labels = self.y_true
             y_pred_proba = self.predictor.predict_proba(data)
         else:
-            labels = np.asarray(data[self.predictor.label])
-            y_pred_proba = self.predictor.predict_proba(data)
-            labels = (labels == self.predictor.positive_class) * 1
+            if isinstance(data, dict):
+                labels = data['target']
+                y_pred_proba = self.predictor.predict_proba(data['data'])
+            else:
+                labels = np.asarray(data[self.predictor.label])
+                y_pred_proba = self.predictor.predict_proba(data)
+                if not is_not_autogluon(self.predictor):
+                    labels = (labels == self.predictor.positive_class) * 1
         groups = self.groups_to_numpy(groups, data)
 
         collect = self.fairness_metrics(labels, y_pred_proba, groups, metrics, verbose=verbose)
@@ -445,11 +510,21 @@ class FairPredictor:
             if return_original:
                 orig_pred_proba = self.predictor.predict_proba(data)
         else:
-            y_true = np.asarray(data[self.predictor.label])
-            new_pred_proba = self.predict_proba(data)
-            if return_original:
-                orig_pred_proba = self.predictor.predict_proba(data)
-            y_true = (y_true == self.predictor.positive_class) * 1
+            if isinstance(data,dict):
+                y_true = data['target']
+                new_pred_proba = self.predict_proba(data)
+                if return_original:
+                    orig_pred_proba = self.predict_proba(data['data'])
+            else:     
+                y_true= np.asarray(data[self.predictor.label])
+                new_pred_proba = self.predict_proba(data)
+                if return_original:
+                    orig_pred_proba = self.predictor.predict_proba(data)
+                y_true = (y_true == self.predictor.positive_class) * 1
+
+        if self.add_noise and return_original:
+                orig_pred_proba += np.random.normal(0,self.add_noise,orig_pred_proba.shape)
+
 
         groups = self.groups_to_numpy(groups, data)
 
@@ -526,8 +601,19 @@ class FairPredictor:
         a  pandas array of scores. Note, these scores are not probabilities, and not guarenteed to
         be non-negative or to sum to 1.
         """
-        proba: pd.DataFrame = self.predictor.predict_proba(data,
+        _guard_predictor_data_match(data,self.predictor)
+
+        if is_not_autogluon(self.predictor):
+            if isinstance(data, dict):
+                proba: pd.DataFrame = self.predictor.predict_proba(data['data'])
+            else:
+                proba: pd.DataFrame = self.predictor.predict_proba(data)
+                #To do, should autogluon also suport dicts?
+        else:    
+            proba: pd.DataFrame = self.predictor.predict_proba(data,
                                                            transform_features=transform_features)
+        if self.add_noise:
+            proba += np.random.normal(0,self.add_noise,proba.shape)
 
         if self.inferred_groups is False:
             if self.groups is False:
@@ -559,8 +645,25 @@ def _needs_groups(func) -> bool:
     ----------
     func either a Scorable or GroupMetric
     """
+    if not auto_gluon_exists:
+        return False
     return not isinstance(func, Scorer)
 
+
+def is_not_autogluon(predictor) -> bool:
+    """Internal helper function. Checks if a predictor is not an autogluon fuction."""
+    if auto_gluon_exists:
+        return not isinstance(predictor,TabularPredictor)
+    return False
+
+def _guard_predictor_data_match(data,predictor):
+    if (data is not None 
+        and is_not_autogluon(predictor)
+        and not(isinstance(data,dict) and
+                data.get('data',False) is not False and
+                data.get('target',False) is not False)):
+        logger.error("When not using autogluon data must be a dict containing keys 'data' and 'target'")
+        
 
 def inferred_attribute_builder(train, target, protected, *args):
     """Helper function that trains tabular predictors suitible for use when the protected attribute
@@ -579,6 +682,7 @@ def inferred_attribute_builder(train, target, protected, *args):
             2. a predictor predicting the protected attribute that doesn't use the target.
 
         """
+    assert auto_gluon_exists, 'Builder only works if autogluon is installed'
     target_train = train.drop(protected, axis=1, inplace=False)
     protected_train = train.drop(target, axis=1, inplace=False)
     target_predictor = TabularPredictor(label=target).fit(train_data=target_train, *args)
@@ -631,7 +735,7 @@ def dispatch_metric(metric, y_true, proba, groups) -> np.ndarray:
 
         return metric(y_true, proba.argmax(1))
     except ValueError:
-        return '-'
+        return np.nan
 
 
 def dispatch_metric_per_group(metric, y_true: np.ndarray, proba: np.ndarray,
