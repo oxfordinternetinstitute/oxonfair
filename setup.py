@@ -2,17 +2,16 @@ import os
 
 from setuptools import setup
 
-AUTOGLUON = "autogluon"
-FAIR = "fair"
+FAIR = "oxonfair"
 
-PYTHON_REQUIRES = ">=3.8, <3.11"
+PYTHON_REQUIRES = ">=3.8"
 
 
 def create_version_file(*, version):
     print("-- Building version " + version)
-    version_path = os.path.join("src", AUTOGLUON, FAIR, "version.py")
+    version_path = os.path.join("src", FAIR, "version.py")
     with open(version_path, "w") as f:
-        f.write(f'"""This is the {AUTOGLUON}.{FAIR} version file."""\n')
+        f.write(f'"""This is the {FAIR} version file."""\n')
         f.write("__version__ = '{}'\n".format(version))
 
 
@@ -46,13 +45,13 @@ def default_setup_args(*, version):
     from setuptools import find_packages
 
     long_description = open("README.md").read()
-    name = f"{AUTOGLUON}.{FAIR}"
+    name = f"{FAIR}"
     setup_args = dict(
         name=name,
         version=version,
-        author="AutoGluon Community",
-        url="https://github.com/autogluon/autogluon-fair",
-        description="AutoML Framework for evaluating ML model fairness metrics",
+        author="Governance of Emerging Technologies Programme (Oxford Internet Insitute)",
+        url="https://github.com/ChrisMRuss/oxon-fair/",
+        description="AutoML Framework for evaluating and enforcing ML model fairness",
         long_description=long_description,
         long_description_content_type="text/markdown",
         license="Apache-2.0",
@@ -60,14 +59,11 @@ def default_setup_args(*, version):
         # Package info
         packages=find_packages("src"),
         package_dir={"": "src"},
-        namespace_packages=[AUTOGLUON],
+        namespace_packages=[],
         zip_safe=True,
         include_package_data=True,
         python_requires=PYTHON_REQUIRES,
         package_data={
-            AUTOGLUON: [
-                "LICENSE",
-            ]
         },
         classifiers=[
             "Development Status :: 4 - Beta",
@@ -93,24 +89,19 @@ def default_setup_args(*, version):
             "Topic :: Scientific/Engineering :: Image Recognition",
         ],
         project_urls={
-            "Documentation": "https://auto.gluon.ai",
-            "Bug Reports": "https://github.com/autogluon/autogluon-fair/issues",
-            "Source": "https://github.com/autogluon/autogluon-fair/",
-            "Contribute!": "https://github.com/autogluon/autogluon-fair/blob/master/CONTRIBUTING.md",
+            "Documentation": "https://github.com/ChrisMRuss/oxon-fair/",
+            "Bug Reports": "https://github.com/ChrisMRuss/oxon-fair/issues",
+            "Source": "https://github.com/ChrisMRuss/oxon-fair/",
+            "Contribute!": "https://github.com/ChrisMRuss/oxon-fair/blob/master/CONTRIBUTING.md",
         },
     )
     return setup_args
 
 
-version = "0.1"
+version = "0.2"
 version = update_version(version, use_file_if_exists=False, create_file=True)
-AUTOGLUON_VERSION_RANGE = ">=0.7,<1.0"
 
 install_requires = [
-    f'{AUTOGLUON}.common{AUTOGLUON_VERSION_RANGE}',
-    f'{AUTOGLUON}.core{AUTOGLUON_VERSION_RANGE}',
-    f'{AUTOGLUON}.tabular[all]{AUTOGLUON_VERSION_RANGE}',
-    f'{AUTOGLUON}.features{AUTOGLUON_VERSION_RANGE}',
     "numpy>=1.21.4,<2.0",
     "pandas>=1.2.5,<2.0",
 ]
