@@ -1,5 +1,4 @@
-# Fairness for Modern Machine Learning
-
+# OxonFair: A new algorithmic Fairness Toolkit
 This is a toolkit designed to enforce a wide-range of fairness definitions and to customize binary classifier behavior.
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capcity models that overfit to the training data. 
 
@@ -18,8 +17,9 @@ or install it with the command `pip install autogluon.fair` .
 ### Source install
 
 To install from source.
- 1. Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
- 2. Download the source of oxonfair and in the source directory run:
+ 1.  (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
+ 2.  (experimental alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>)
+ 3. Download the source of oxonfair and in the source directory run:
     python3 -m pip install -e .
 
 Now run the [Example Notebook](examples/quickstart_fair.ipynb) or try some of the example below.
