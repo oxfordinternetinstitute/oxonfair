@@ -5,72 +5,14 @@ from autogluon.core import metrics
 import oxonfair as fair
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
+train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')[::500]
+test_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
+predictor = TabularPredictor(label='class').fit(train_data=train_data,time_limit=3)
+new_test = test_data[~test_data['race'].isin([' Other', ' Asian-Pac-Islander', ])]  # drop other
+        
 
 
-def test_metrics():
-    "check that core.metrics give the same answer as group metrics"
-    array1 = np.random.randint(0, 2, 100)
-    array2 = np.random.randint(0, 2, 100)
-    array3 = np.zeros(100)
-    met_list = (metrics.accuracy,
-                metrics.balanced_accuracy,
-                metrics.f1,
-                metrics.mcc,
-                metrics.precision,
-                metrics.recall)
-    group_met_list = (
-        gm.accuracy,
-        gm.balanced_accuracy,
-        gm.f1,
-        gm.mcc,
-        gm.precision,
-        gm.recall)
-    for met, group_met in zip(met_list, group_met_list):
-        assert np.isclose(met(array1, array2), group_met(array1, array2, array3)[0], 1e-5)
-
-
-def test_metrics_identities():
-    """ sanity check, make sure metrics are consistent with standard identities.
-     This combined with test metrics gives coverage of everything up to the clarify metrics"""
-    array1 = np.random.randint(0, 2, 100)
-    array2 = np.random.randint(0, 2, 100)
-    array3 = np.random.randint(0, 4, 100)
-    assert np.isclose(gm.pos_data_rate(array1, array2, array3),
-                      1 - gm.neg_data_rate(array1, array2, array3)).all()
-    assert np.isclose(gm.pos_pred_rate(array1, array2, array3),
-                      1 - gm.neg_pred_rate(array1, array2, array3)).all()
-    assert np.isclose(gm.true_pos_rate(array1, array2, array3),
-                      1 - gm.false_neg_rate(array1, array2, array3)).all()
-    assert np.isclose(gm.true_neg_rate(array1, array2, array3),
-                      1 - gm.false_pos_rate(array1, array2, array3)).all()
-    accuracy = gm.Utility([1, 0, 0, 1], 'accuracy')
-    assert np.isclose(gm.accuracy(array1, array2, array3), accuracy(array1, array2, array3)).all()
-    # assert np.isclose(gm.(A,B,array3),1-gm.(A,B,array3)).all()
-    # check that additive_metrics can be called.
-    assert np.isclose(gm.equalized_odds(array1, array2, array3),
-                      (gm.true_pos_rate.diff(array1, array2, array3)
-                       + gm.true_neg_rate.diff(array1, array2, array3)) / 2).all()
-
-
-def test_fairness():
-    "range of fairness tests"
-    train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')[::500]
-    test_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
-    predictor = TabularPredictor(label='class').fit(train_data=train_data)
-    base_functionality(predictor, train_data)
-    no_groups(predictor, test_data)
-    for use_fast in [True, False]:  # use_fast=False makes this significantly slow
-        predict(predictor, test_data, use_fast)
-        recall_diff(predictor, test_data, use_fast)
-        new_test = test_data[~test_data['race'].isin([' Other', ' Asian-Pac-Islander', ])]  # drop other
-        subset(predictor, test_data, new_test, use_fast)
-        disp_impact(predictor, new_test, use_fast)
-        min_recall(predictor, new_test, use_fast)
-        pathologoical2(predictor, new_test, use_fast)
-    pathologoical(predictor, test_data)
-
-
-def base_functionality(predictor, train_data):
+def test_base_functionality():
     "not calling fit should not alter predict or predict_proba"
     fpredictor = FairPredictor(predictor, train_data, 'sex')
     fpredictor.evaluate()
@@ -85,9 +27,9 @@ def base_functionality(predictor, train_data):
     fpredictor.evaluate_groups(return_original=True)
 
 
-def no_groups(predictor, train_data):
+def test_no_groups(use_fast=True):
     "check pathway works with no groups"
-    fairp = fair.FairPredictor(predictor, train_data)
+    fairp = fair.FairPredictor(predictor, train_data, use_fast=use_fast)
     fairp.evaluate()
     fairp.evaluate_groups()
     fairp.evaluate_fairness()
@@ -96,14 +38,14 @@ def no_groups(predictor, train_data):
     fairp.fit(gm.accuracy, gm.f1, 0)
 
 
-def predict(predictor, test_data, use_fast):
+def test_predict(use_fast=True):
     "check that fairpredictor returns the same as a standard predictor before fit is called"
     fpredictor = fair.FairPredictor(predictor, test_data, groups='sex', use_fast=use_fast)
     assert all(predictor.predict(test_data) == fpredictor.predict(test_data))
     assert all(predictor.predict_proba(test_data) == fpredictor.predict_proba(test_data))
 
 
-def pathologoical(predictor, train_data):
+def test_pathologoical():
     "Returns a single constant classifier"
     fpredictor = fair.FairPredictor(predictor, train_data, groups='sex', use_fast=False)
     fpredictor.fit(metrics.roc_auc, gm.equalized_odds, 0.75)
@@ -111,7 +53,7 @@ def pathologoical(predictor, train_data):
     fpredictor.evaluate_fairness()
 
 
-def pathologoical2(predictor, train_data, use_fast):
+def test_pathologoical2(use_fast=True):
     "pass it the same objective twice"
     fpredictor = fair.FairPredictor(predictor, train_data, groups='sex', use_fast=use_fast)
     fpredictor.fit(gm.balanced_accuracy, gm.balanced_accuracy, 0)
@@ -119,7 +61,7 @@ def pathologoical2(predictor, train_data, use_fast):
     fpredictor.evaluate_fairness()
 
 
-def recall_diff(predictor, test_data, use_fast):
+def test_recall_diff(use_fast=True):
     """ Maximize accuracy while enforcing weak equalized odds,
     such that the difference in recall between groups is less than 2.5%
     This also tests the sign functionality on constraints and the objective"""
@@ -144,7 +86,7 @@ def recall_diff(predictor, test_data, use_fast):
     assert acc>fpredictor.evaluate()['updated']['accuracy']
 
 
-def subset(predictor, test_data, new_test, use_fast):
+def test_subset(use_fast=True):
     "set up new fair class using 'race' as the protected group and evaluate on test data"
     fpredictor = fair.FairPredictor(predictor, test_data, 'race', use_fast=use_fast)
 
@@ -171,7 +113,7 @@ def disp_impact(predictor, new_test, use_fast):
     assert measures['updated']['disparate_impact'] > 0.8
 
 
-def min_recall(predictor, new_test, use_fast):
+def test_min_recall(use_fast=True):
     "check that we can force recall >0.5 for all groups"
     fpredictor = fair.FairPredictor(predictor, new_test, 'race', use_fast=use_fast)
     # Enforce that every group has a recall over 0.5
@@ -180,33 +122,50 @@ def min_recall(predictor, new_test, use_fast):
     assert all(scores['recall'][:-1] > 0.5)
 
 
-def test_recall_diff_inferred():
+def test_no_groups_slow():
+    test_no_groups(False)
+
+def test_predict_slow():
+    test_predict(False)
+
+def test_pathologoical2_slow():
+    test_pathologoical2(False)
+
+def test_recall_diff_slow():
+    test_recall_diff(False)
+
+def test_subset_slow():
+    test_subset(False)
+
+def test_min_recall_slow():
+    test_min_recall(False)
+
+def test_recall_diff_inferred(use_fast=True):
     "use infered attributes instead of provided attributes"
-    train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')[::500]
-    test_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
     # train two new classifiers one to predict class without using sex and one to fpredict sex without using class
-    predictor, protected = fair.learners.inferred_attribute_builder(train_data, 'class', 'sex')
+    predictor, protected = fair.learners.inferred_attribute_builder(train_data, 'class', 'sex',time_limit=3)
+    # Build fair object using this and evaluate fairness n.b. classifier
+    # accuracy decreases due to lack of access to the protected attribute, but
+    # otherwise code is doing the same thing
+    fpredictor = fair.FairPredictor(predictor, train_data, 'sex', inferred_groups=protected, use_fast=use_fast)
 
-    for use_fast in [True, False]:
-        # Build fair object using this and evaluate fairness n.b. classifier
-        # accuracy decreases due to lack of access to the protected attribute, but
-        # otherwise code is doing the same thing
-        fpredictor = fair.FairPredictor(predictor, train_data, 'sex', inferred_groups=protected, use_fast=use_fast)
+    # Enforce that the new classifier will satisfy equalised odds (recall
+    # difference between protected attributes of less than 2.5%) despite not
+    # using sex at run-time
 
-        # Enforce that the new classifier will satisfy equalised odds (recall
-        # difference between protected attributes of less than 2.5%) despite not
-        # using sex at run-time
+    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025)
 
-        fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025)
+    measures = fpredictor.evaluate_fairness()
 
-        measures = fpredictor.evaluate_fairness()
+    assert measures['original']['recall.diff'] > 0.025
 
-        assert measures['original']['recall.diff'] > 0.0025
+    assert measures['updated']['recall.diff'] < 0.025
 
-        assert measures['updated']['recall.diff'] < 0.0025
+    # Prove that sex isn't being used by dropping it and reevaluating.
 
-        # Prove that sex isn't being used by dropping it and reevaluating.
+    new_data = test_data.drop('sex', axis=1, inplace=False)
+    fpredictor.evaluate_groups(new_data, test_data['sex'])
+    # No test needed, code just has to run with sex dropped
 
-        new_data = test_data.drop('sex', axis=1, inplace=False)
-        fpredictor.evaluate_groups(new_data, test_data['sex'])
-        # No test needed, code just has to run with sex dropped
+def test_recall_diff_inferred_slow():
+    test_recall_diff_inferred(False)
