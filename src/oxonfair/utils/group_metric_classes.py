@@ -54,6 +54,7 @@ class BaseGroupMetric:
         groups: np.ndarray = args[2]
         if not y_true.size == y_pred.size == groups.size:
             logger.error('Inputs to group_metric are of different sizes.')
+            assert y_true.size == y_pred.size == groups.size
         t_pos = y_true * y_pred
         f_pos = (1 - y_true) * y_pred
         f_neg = y_true * (1 - y_pred)

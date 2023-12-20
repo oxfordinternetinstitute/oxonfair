@@ -70,7 +70,7 @@ class FairPredictor:
         self.predictor = predictor
         if groups is None:
             groups = False
-        # Internal logic differentiates between groups are not provided on other data
+        # Internal logic differentiates between groups should be recovered from other data
         # i.e. groups = None
         # and there are no groups i.e. groups = False
         # However, as a user interface groups = None makes more sense for instantiation.
@@ -80,9 +80,10 @@ class FairPredictor:
             self.validation_data=validation_data['data']
             validation_labels=validation_data['target']
             if groups is False:
-                groups = self.validation_data.get('groups', False)
+                groups = validation_data.get('groups', False)
+                self.groups = groups
             else:
-                if validation_data.get('groups', False):
+                if validation_data.get('groups', False) is not False:
                     logger.warn('Groups passed twice to fairpredictor both as part of the dataset and as an argument. The argument will be used.')
         else:
             self.validation_data = validation_data
@@ -97,15 +98,14 @@ class FairPredictor:
 
         self.inferred_groups: bool = inferred_groups
         if inferred_groups:
-            self._val_thresholds = np.asarray(inferred_groups.predict_proba(self.validation_data))
+            self._val_thresholds = call_or_get_proba(inferred_groups,self.validation_data)
         else:
             # Use OneHot and store encoder so it will work on new data
             self.group_encoder: OneHotEncoder = OneHotEncoder(handle_unknown='ignore')
             self.group_encoder.fit(self._internal_groups.reshape(-1, 1))
             self._val_thresholds = self.group_encoder.transform(
                 self._internal_groups.reshape(-1, 1)).toarray()
-
-        self.proba = np.asarray(predictor.predict_proba(self.validation_data))
+        self.proba = call_or_get_proba(predictor,self.validation_data)
         self.add_noise = add_noise
         if add_noise:
             self.proba += np.random.normal(0,add_noise,self.proba.shape)
@@ -133,20 +133,20 @@ class FairPredictor:
         numpy array
         """
         if groups is None and isinstance(data, dict):
-                groups=data.get('groups', None)
+            groups=data.get('groups', None)
         if groups is None:
             groups = self.groups
         if isinstance(data, dict):
             data=data['data']
+        if groups is False:
+            return np.zeros(data.shape[0])
+
         if callable(groups):
             return groups(data).argmax(1)
         if isinstance(groups, str):
             return np.asarray(data[groups])
         if  isinstance(groups,int):
             return np.asarray(data[:,groups])
-
-        if groups is False:
-            return np.zeros(data.shape[0])
         return groups
 
     def fit(self, objective, constraint=group_metrics.accuracy, value=0.0, *,
@@ -310,14 +310,15 @@ class FairPredictor:
         else:
             if isinstance(data,dict):
                 labels = data['target']
-                proba = np.asarray(self.predictor.predict_proba(data['data']))
+                proba = call_or_get_proba(self.predictor,data['data'])
+                
             else:
                 labels = np.asarray(data[self.predictor.label])
-                proba = np.asarray(self.predictor.predict_proba(data))
+                proba = call_or_get_proba(self.predictor,data)
                 labels = (labels == self.predictor.positive_class) * 1
             if self.add_noise:
                 proba += np.random.normal(0,self.add_noise,proba.shape)
-
+            
             groups = self.groups_to_numpy(groups, data)
 
             if self.inferred_groups is False:
@@ -326,8 +327,11 @@ class FairPredictor:
                 else:
                     val_thresholds = self.group_encoder.transform(groups.reshape(-1, 1)).toarray()
             else:
-                val_thresholds = np.asarray(self.inferred_groups.predict_proba(data))
-
+                if isinstance(data,dict):
+                    val_thresholds=call_or_get_proba(self.inferred_groups,data['data'])
+                else:
+                    val_thresholds = call_or_get_proba(self.inferred_groups,data)
+        print(val_thresholds.shape,groups.shape,labels.shape,proba.shape)
         if self.use_fast is False:
             if _needs_groups(objective1):
                 objective1 = fix_groups(objective1, groups)
@@ -429,14 +433,14 @@ class FairPredictor:
         if data is None:
             data = self.validation_data
             labels = self.y_true
-            y_pred_proba = self.predictor.predict_proba(data)
+            y_pred_proba = call_or_get_proba(self.predictor, data)
         else:
             if isinstance(data, dict):
                 labels = data['target']
-                y_pred_proba = self.predictor.predict_proba(data['data'])
+                y_pred_proba = call_or_get_proba(self.predictor, data['data'])
             else:
                 labels = np.asarray(data[self.predictor.label])
-                y_pred_proba = self.predictor.predict_proba(data)
+                y_pred_proba = call_or_get_proba(self.predictor, data)
                 if not is_not_autogluon(self.predictor):
                     labels = (labels == self.predictor.positive_class) * 1
         groups = self.groups_to_numpy(groups, data)
@@ -501,6 +505,7 @@ class FairPredictor:
         either a dict of pandas dataframes or a single pandas dataframe, depending on the value of
         return original.
         """
+        _guard_predictor_data_match(data,self.predictor)
         if metrics is None:
             metrics = group_metrics.default_group_metrics
         if data is None:
@@ -508,18 +513,18 @@ class FairPredictor:
             y_true = self.y_true
             new_pred_proba = self.predict_proba(data)
             if return_original:
-                orig_pred_proba = self.predictor.predict_proba(data)
+                orig_pred_proba = call_or_get_proba(self.predictor, data)
         else:
             if isinstance(data,dict):
                 y_true = data['target']
                 new_pred_proba = self.predict_proba(data)
                 if return_original:
-                    orig_pred_proba = self.predict_proba(data['data'])
+                    orig_pred_proba = call_or_get_proba(self.predictor, data['data'])
             else:     
                 y_true= np.asarray(data[self.predictor.label])
                 new_pred_proba = self.predict_proba(data)
                 if return_original:
-                    orig_pred_proba = self.predictor.predict_proba(data)
+                    orig_pred_proba = call_or_get_proba(self.predictor, data)
                 y_true = (y_true == self.predictor.positive_class) * 1
 
         if self.add_noise and return_original:
@@ -591,7 +596,7 @@ class FairPredictor:
             out.index.name = 'groups'
         return out
 
-    def predict_proba(self, data, *, transform_features=True) -> pd.DataFrame:
+    def predict_proba(self, data, *, transform_features=True):
         """Duplicates the functionality of predictor.predict_proba with the updated predictor.
         parameters
         ----------
@@ -601,14 +606,10 @@ class FairPredictor:
         a  pandas array of scores. Note, these scores are not probabilities, and not guarenteed to
         be non-negative or to sum to 1.
         """
-        _guard_predictor_data_match(data,self.predictor)
-
+        if isinstance(data, dict):
+            data=data['data']
         if is_not_autogluon(self.predictor):
-            if isinstance(data, dict):
-                proba: pd.DataFrame = self.predictor.predict_proba(data['data'])
-            else:
-                proba: pd.DataFrame = self.predictor.predict_proba(data)
-                #To do, should autogluon also suport dicts?
+            proba = call_or_get_proba(self.predictor, data)
         else:    
             proba: pd.DataFrame = self.predictor.predict_proba(data,
                                                            transform_features=transform_features)
@@ -622,7 +623,10 @@ class FairPredictor:
                 groups = self.groups_to_numpy(self.groups, data)
                 onehot = self.group_encoder.transform(groups.reshape(-1, 1)).toarray()
         else:
-            onehot = np.asarray(self.inferred_groups.predict_proba(data))
+            if isinstance(data,dict):
+                onehot = call_or_get_proba(self.inferred_groups, data['data'])
+            else:    
+                onehot = call_or_get_proba(self.inferred_groups, data)
         if self.use_fast:
             tmp = np.zeros_like(proba)
             tmp[:, 1] = self.offset[onehot.argmax(1)]
@@ -635,7 +639,11 @@ class FairPredictor:
 
     def predict(self, data, *, transform_features=True) -> pd.Series:
         "duplicates the functionality of predictor.predict but with the fair predictor"
-        return self.predict_proba(data, transform_features=transform_features).idxmax(1)
+        proba=self.predict_proba(data, transform_features=transform_features)
+        if isinstance(proba,pd.DataFrame):
+            return proba.idxmax(1)
+        else:
+            return np.argmax(proba,1)
 
 
 def _needs_groups(func) -> bool:
@@ -656,6 +664,14 @@ def is_not_autogluon(predictor) -> bool:
         return not isinstance(predictor,TabularPredictor)
     return False
 
+def call_or_get_proba(predictor,data):
+    """Internal helper function. Implicit dispatch depending on if predictor is callable or follows scikit-learn interface.
+    Converts output to numpy array"""
+    if callable(predictor):
+        return np.asarray(predictor(data))
+    else:
+        return np.asarray(predictor.predict_proba(data))
+
 def _guard_predictor_data_match(data,predictor):
     if (data is not None 
         and is_not_autogluon(predictor)
@@ -663,9 +679,10 @@ def _guard_predictor_data_match(data,predictor):
                 data.get('data',False) is not False and
                 data.get('target',False) is not False)):
         logger.error("When not using autogluon data must be a dict containing keys 'data' and 'target'")
+        assert False
         
 
-def inferred_attribute_builder(train, target, protected, *args):
+def inferred_attribute_builder(train, target, protected, *args, **kwargs):
     """Helper function that trains tabular predictors suitible for use when the protected attribute
         is inferred when enforcing fairness.
         parameters
@@ -685,8 +702,8 @@ def inferred_attribute_builder(train, target, protected, *args):
     assert auto_gluon_exists, 'Builder only works if autogluon is installed'
     target_train = train.drop(protected, axis=1, inplace=False)
     protected_train = train.drop(target, axis=1, inplace=False)
-    target_predictor = TabularPredictor(label=target).fit(train_data=target_train, *args)
-    protected_predictor = TabularPredictor(label=protected).fit(train_data=protected_train, *args)
+    target_predictor = TabularPredictor(label=target).fit(train_data=target_train, *args, **kwargs)
+    protected_predictor = TabularPredictor(label=protected).fit(train_data=protected_train, *args, **kwargs)
     return target_predictor, protected_predictor
 
 
