@@ -4,19 +4,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.base import is_classifier
+from ..utils import group_metrics
+from ..utils.group_metric_classes import BaseGroupMetric
+from . import efficient_compute, fair_frontier
 
-auto_gluon_exists=True
+AUTOGLUON_EXISTS=True
 try:
     from autogluon.core.metrics import Scorer
     from autogluon.tabular import TabularPredictor
 except ModuleNotFoundError:
-    auto_gluon_exists = False
-    pass
+    AUTOGLUON_EXISTS = False
 
-from ..utils import group_metrics
-from ..utils.group_metric_classes import BaseGroupMetric
-from . import efficient_compute, fair_frontier
 logger = logging.getLogger(__name__)
 
 
@@ -30,24 +28,24 @@ class FairPredictor:
         2. A sklearn classifier.
         3. An arbitary function 
         4. The value None. 
-        If None  is used, we assume that we are rescoring predictions already made elsewhere, and the validation data
-        should be a copy of the classifier outputs.
+        If None  is used, we assume that we are rescoring predictions already made elsewhere, and 
+        the validation data should be a copy of the classifier outputs.
     validation_data: This can be:
         1. a pandas dataframe that can be read by predictor.
         2. a dict contain mutliple entries
             'data' containing a pandas dataframe or numpy array to be fed to the classifier.
             'target' the ground truth-labels used to evaluate classifier peformance.
             'groups' (optional)  
-    groups (optional, default None): is an indicator of protected attributes, i.e.  the discrete groups used to measure
-    fairness
+    groups (optional, default None): is an indicator of protected attributes, i.e.  the discrete
+        groups used to measure fairness
     it may be:
         1. The name of a pandas column containing discrete values
         2. a vector of the same size as the validation set containing discrete values
         3. The value None   (used when we don't require groups, for example,
-               if we are optimizing F1 without per-group thresholds, or if groups are explicitly specified by a dict in
-               validation data)
-    inferred_groups: (Optional, default False) A binary or multiclass autogluon predictor that infers the protected
-                                attributes.
+               if we are optimizing F1 without per-group thresholds, or if groups are explicitly
+               specified by a dict in validation data)
+    inferred_groups: (Optional, default False) A binary or multiclass autogluon predictor that
+        infers the protected attributes.
         This can be used to enforce fairness when no information about protected attribtutes is
         avalible at test time. If this is not false, fairness will be measured using the variable
         'groups', but enforced using the predictor response.
@@ -57,14 +55,16 @@ class FairPredictor:
     If use_fast is False, autogluon scorers are also supported.
     """
 
-    def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False, add_noise=False,
+    def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
+                 add_noise=False,
                  use_fast=True) -> None:
         if predictor is None:
-            predictor = lambda x: x
+            def predictor(x):
+                return x
 
         if not (is_not_autogluon(predictor)) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
-        
+
         #Check if sklearn
         _guard_predictor_data_match(validation_data,predictor)
         self.predictor = predictor
@@ -84,7 +84,8 @@ class FairPredictor:
                 self.groups = groups
             else:
                 if validation_data.get('groups', False) is not False:
-                    logger.warn('Groups passed twice to fairpredictor both as part of the dataset and as an argument. The argument will be used.')
+                    logger.warning("""Groups passed twice to fairpredictor both as part of
+                                   the dataset and as an argument. The argument will be used.""")
         else:
             self.validation_data = validation_data
             validation_labels = self.validation_data[predictor.label]
@@ -156,9 +157,11 @@ class FairPredictor:
         parameters
         ----------
         objective: a BaseGroupMetric or Scorable to be optimised
-        constraint (optional): a BaseGroupMetric or Scorable that must be above/below a certain value
+        constraint (optional): a BaseGroupMetric or Scorable that must be above/below a certain
+        value
         value (optional): float the value constraint must be above or below
-        If neither constraint nor value are provided fit enforces the constraint that accuracy is greater or equal to zero.
+        If neither constraint nor value are provided fit enforces the constraint that accuracy
+        is greater or equal to zero.
 
         greater_is_better_obj: bool or None Governs if the objective is maximised (True) or
                              minimized (False).
@@ -194,7 +197,8 @@ class FairPredictor:
             mask = self.frontier[0][1] <= value
 
         if mask.sum() == 0:
-            logger.warning('No solutions satisfy the constraint found, selecting the closest solution')
+            logger.warning("""No solutions satisfy the constraint found, selecting the
+                           closest solution""")
             weights = self.frontier[1]
             vmax = [self.frontier[0][1].argmin(),
                     self.frontier[0][1].argmax()][int(greater_is_better_const)]
@@ -206,8 +210,8 @@ class FairPredictor:
                     values.argmax()][int(greater_is_better_obj)]
         self.offset = weights.T[vmax].T
 
-    def compute_frontier(self, objective1, objective2, *, greater_is_better_obj1,
-                         greater_is_better_obj2, tol=False,
+    def compute_frontier(self, objective1, objective2, greater_is_better_obj1,
+                         greater_is_better_obj2, *, tol=False,
                          grid_width=False) -> None:
         """ Computes the parato frontier. Internal logic used by fit
         parameters
@@ -263,15 +267,16 @@ class FairPredictor:
                                                           self._internal_groups, steps=grid_width,
                                                           directions=direction)
         else:
+            coarse_thresh = np.asarray(self._val_thresholds, dtype=np.float16)
             self.frontier = fair_frontier.build_coarse_to_fine_front(objective1, objective2,
                                                                      self.y_true, proba,
-                                                                     np.asarray(self._val_thresholds,
-                                                                                dtype=np.float16),
+                                                                     coarse_thresh,
                                                                      directions=direction,
                                                                      nr_of_recursive_calls=3,
                                                                      initial_divisions=grid_width)
 
-    def plot_frontier(self, data=None, groups=None, objective1=False, objective2=False, show_updated=True, color=None, new_plot=True) -> None:
+    def plot_frontier(self, data=None, groups=None, objective1=False, objective2=False,
+                        show_updated=True, color=None, new_plot=True) -> None:
         """ Plots an existing parato frontier with respect to objective1 and objective2.
             These do not need to be the same objectives as used when computing the frontier
             The original predictor, and the predictor selected by fit is shown in different colors.
@@ -285,9 +290,11 @@ class FairPredictor:
                                     objective provided to fit is used in its place.
             objective2: (optional) an objective to be plotted, if not specified use the
                                     constraint provided to fit is used in its place.
-            show_updated: (optional, default True) Highlight the updated classifier with a different marker
+            show_updated: (optional, default True) Highlight the updated classifier with a
+                different marker
             color: (optional, default None) Specify the color the frontier should be plotted in. 
-            new_plot: (optional, default True) specifies if plt.figure() should be called at the start or if an existing plot should be overlayed
+            new_plot: (optional, default True) specifies if plt.figure() should be called at the
+            start or if an existing plot should be overlayed
         """
         _guard_predictor_data_match(data,self.predictor)
         if self.frontier is None:
@@ -311,14 +318,14 @@ class FairPredictor:
             if isinstance(data,dict):
                 labels = data['target']
                 proba = call_or_get_proba(self.predictor,data['data'])
-                
+
             else:
                 labels = np.asarray(data[self.predictor.label])
                 proba = call_or_get_proba(self.predictor,data)
                 labels = (labels == self.predictor.positive_class) * 1
             if self.add_noise:
                 proba += np.random.normal(0,self.add_noise,proba.shape)
-            
+
             groups = self.groups_to_numpy(groups, data)
 
             if self.inferred_groups is False:
@@ -456,7 +463,7 @@ class FairPredictor:
         return collect
 
     def fairness_metrics(self, y_true: np.ndarray, proba, groups: np.ndarray,
-                         metrics: dict, *, verbose=False) -> pd.DataFrame:
+                        metrics, *, verbose=False) -> pd.DataFrame:
         """Helper function for evaluate_fairness
         Report fairness metrics that do not require additional information.
         parameters
@@ -653,24 +660,24 @@ def _needs_groups(func) -> bool:
     ----------
     func either a Scorable or GroupMetric
     """
-    if not auto_gluon_exists:
+    if not AUTOGLUON_EXISTS:
         return False
     return not isinstance(func, Scorer)
 
 
 def is_not_autogluon(predictor) -> bool:
     """Internal helper function. Checks if a predictor is not an autogluon fuction."""
-    if auto_gluon_exists:
+    if AUTOGLUON_EXISTS:
         return not isinstance(predictor,TabularPredictor)
     return False
 
 def call_or_get_proba(predictor,data):
-    """Internal helper function. Implicit dispatch depending on if predictor is callable or follows scikit-learn interface.
+    """Internal helper function. Implicit dispatch depending on if predictor is callable
+    or follows scikit-learn interface.
     Converts output to numpy array"""
     if callable(predictor):
         return np.asarray(predictor(data))
-    else:
-        return np.asarray(predictor.predict_proba(data))
+    return np.asarray(predictor.predict_proba(data))
 
 def _guard_predictor_data_match(data,predictor):
     if (data is not None 
@@ -678,9 +685,10 @@ def _guard_predictor_data_match(data,predictor):
         and not(isinstance(data,dict) and
                 data.get('data',False) is not False and
                 data.get('target',False) is not False)):
-        logger.error("When not using autogluon data must be a dict containing keys 'data' and 'target'")
+        logger.error("""When not using autogluon data must be a dict containing keys 
+                        'data' and 'target'""")
         assert False
-        
+  
 
 def inferred_attribute_builder(train, target, protected, *args, **kwargs):
     """Helper function that trains tabular predictors suitible for use when the protected attribute
@@ -699,11 +707,12 @@ def inferred_attribute_builder(train, target, protected, *args, **kwargs):
             2. a predictor predicting the protected attribute that doesn't use the target.
 
         """
-    assert auto_gluon_exists, 'Builder only works if autogluon is installed'
+    assert AUTOGLUON_EXISTS, 'Builder only works if autogluon is installed'
     target_train = train.drop(protected, axis=1, inplace=False)
     protected_train = train.drop(target, axis=1, inplace=False)
     target_predictor = TabularPredictor(label=target).fit(train_data=target_train, *args, **kwargs)
-    protected_predictor = TabularPredictor(label=protected).fit(train_data=protected_train, *args, **kwargs)
+    protected_predictor = TabularPredictor(label=protected)
+    protected_predictor.fit(train_data=protected_train, *args, **kwargs)
     return target_predictor, protected_predictor
 
 
@@ -774,7 +783,7 @@ def dispatch_metric_per_group(metric, y_true: np.ndarray, proba: np.ndarray,
     out = np.empty_like(unique, dtype=float)
     if isinstance(metric, Scorer) and (metric.needs_pred is False):
         for i, grp in enumerate(unique):
-            mask = (grp == groups)
+            mask = grp == groups
             try:
                 out[i] = metric(y_true[mask], proba[mask, 1] - proba[mask, 0])
             except ValueError:
