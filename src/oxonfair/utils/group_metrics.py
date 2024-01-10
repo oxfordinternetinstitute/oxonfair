@@ -20,7 +20,7 @@ true_pos_rate = GroupMetric(lambda TP, FP, FN, TN: (TP) / (1e-6 + TP + FN), 'Tru
 true_neg_rate = GroupMetric(lambda TP, FP, FN, TN: (TN) / (1e-6 + FP + TN), 'True Negative Rate')
 false_pos_rate = GroupMetric(lambda TP, FP, FN, TN: (FP) / (1e-6 + FP + TN), 'False Positive Rate')
 false_neg_rate = GroupMetric(lambda TP, FP, FN, TN: (FN) / (1e-6 + TP + FN), 'False Negative Rate')
-pos_pred_val = GroupMetric(lambda TP, FP, FN, TN: (TP) / (1e-6 + TP + FP), 'Positive Predicted Value')
+pos_pred_val = GroupMetric(lambda TP, FP, FN, TN: (TP) / (1e-6 + TP + FP),'Positive Predicted Value')
 neg_pred_val = GroupMetric(lambda TP, FP, FN, TN: (TN) / (1e-6 + TN + FN), 'Negative Predicted Value')
 
 # Existing binary metrics for autogluon
@@ -30,8 +30,8 @@ balanced_accuracy = GroupMetric(lambda TP, FP, FN, TN: (TP / (1e-6 + TP + FN) + 
 min_accuracy = GroupMetric(lambda TP, FP, FN, TN: np.minimum(TP / (1e-6 + TP + FN), TN / (1e-6 + TN + FP)),
                            'Minimum-Label-Accuracy')  # common in min-max fairness literature
 f1 = GroupMetric(lambda TP, FP, FN, TN: (2 * TP) / (1e-6 + 2 * TP + FP + FN), 'F1 score')
-precision = pos_pred_val.rename('Precision')
-recall = true_pos_rate.rename('Recall')
+precision = pos_pred_val.clone('Precision')
+recall = true_pos_rate.clone('Recall')
 mcc = GroupMetric(lambda TP, FP, FN, TN:
                   (TP * TN - FP * FN) / (1e-6 + np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))),
                   'MCC')
@@ -66,16 +66,16 @@ extended_group_metrics = {**default_accuracy_metrics, **standard_metrics, **coun
 
 # Postprocessing Clarify metrics
 # https://mkai.org/learn-how-amazon-sagemaker-clarify-helps-detect-bias
-class_imbalance = pos_data_rate.diff.rename('Class Imbalance')
-demographic_parity = pos_pred_rate.diff.rename('Demographic Parity')
-disparate_impact = pos_pred_rate.ratio.rename('Disparate Impact')
-acceptance_rate = precision.rename('Acceptance Rate')
+class_imbalance = pos_data_rate.diff.clone('Class Imbalance')
+demographic_parity = pos_pred_rate.diff.clone('Demographic Parity')
+disparate_impact = pos_pred_rate.ratio.clone('Disparate Impact')
+acceptance_rate = precision.clone('Acceptance Rate')
 cond_accept = GroupMetric(lambda TP, FP, FN, TN: (TP + FN) / (1e-6 + TP + FP), 'Conditional Acceptance Rate')
 cond_reject = GroupMetric(lambda TP, FP, FN, TN: (TN + FP) / (1e-6 + TN + FN), 'Conditional Rejectance Rate')
-specificity = true_neg_rate.rename('Specificity')
-rejection_rate = neg_pred_val.rename('Rejection Rate')
+specificity = true_neg_rate.clone('Specificity')
+rejection_rate = neg_pred_val.clone('Rejection Rate')
 error_ratio = GroupMetric(lambda TP, FP, FN, TN: FP / (1e-6 + FN), 'Error Ratio')
-treatment_equality = error_ratio.diff.rename('Treatment Equality')
+treatment_equality = error_ratio.diff.clone('Treatment Equality')
 
 gen_entropy = GroupMetric(lambda TP, FP, FN, TN: ((TP + FP + TN + FN) * (TP + FP * 4 + TN) /
                           (TP + FP * 2 + TN + 10**-6)**2 - 1) / 2, 'Generalized Entropy', False)
@@ -98,13 +98,13 @@ clarify_metrics = {
 # Binary definitions from: https://fairware.cs.umass.edu/papers/Verma.pdf
 # As all definitions just say 'these should be equal' we report the max difference in values as a measure of inequality.
 
-statistical_parity = demographic_parity.rename('Statistical Parity')
-predictive_parity = precision.diff.rename('Predictive Parity')
-predictive_equality = false_neg_rate.diff.rename('Predictive Equality')
-equal_opportunity = recall.diff.rename('Equal Opportunity')
+statistical_parity = demographic_parity.clone('Statistical Parity')
+predictive_parity = precision.diff.clone('Predictive Parity')
+predictive_equality = false_neg_rate.diff.clone('Predictive Equality')
+equal_opportunity = recall.diff.clone('Equal Opportunity')
 equalized_odds = AddGroupMetrics(true_pos_rate.diff, true_neg_rate.diff, 'Equalized Odds')
 cond_use_accuracy = AddGroupMetrics(pos_pred_val.diff, neg_pred_val.diff, 'Conditional Use Accuracy')
-accuracy_parity = accuracy.diff.rename('Accuracy Parity')
+accuracy_parity = accuracy.diff.clone('Accuracy Parity')
 
 verma_metrics = {
     'statistical_parity': statistical_parity,
