@@ -248,6 +248,7 @@ class AddGroupMetrics(BaseGroupMetric):
         self.metric1: BaseGroupMetric = metric1
         self.metric2: BaseGroupMetric = metric2
         self.name = name
+        self.cond_weights = None
         if metric1.greater_is_better != metric2.greater_is_better:
             logger.error('Metric1 and metric2  must satisfy the condition. metric1.greater_is_better == metric2.greater_is_better ')
         if not 0 <= weight <= 1:

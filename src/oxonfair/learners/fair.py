@@ -57,7 +57,7 @@ class FairPredictor:
 
     def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
                  add_noise=False,
-                 use_fast=True) -> None:
+                 use_fast=True,conditioning_factor=None) -> None:
         if predictor is None:
             def predictor(x):
                 return x
@@ -76,6 +76,7 @@ class FairPredictor:
         # However, as a user interface groups = None makes more sense for instantiation.
         self.groups = groups
         self.use_fast: bool = use_fast
+        self.conditioning_factor = conditioning_factor
         if isinstance(validation_data,dict):
             self.validation_data=validation_data['data']
             validation_labels=validation_data['target']
@@ -85,6 +86,13 @@ class FairPredictor:
             else:
                 if validation_data.get('groups', False) is not False:
                     logger.warning("""Groups passed twice to fairpredictor both as part of
+                                   the dataset and as an argument. The argument will be used.""")
+            if conditioning_factor is False:
+                conditioning_factor = validation_data.get('cond_fact', False)
+                self.conditioning_factor = conditioning_factor
+            else:
+                if validation_data.get('cond_fact', False) is not False:
+                    logger.warning("""Conditioning factor passed twice to fairpredictor both as part of
                                    the dataset and as an argument. The argument will be used.""")
         else:
             self.validation_data = validation_data
@@ -123,7 +131,7 @@ class FairPredictor:
         self.objective2 = None
         self.round = False
 
-    def groups_to_numpy(self, groups, data) -> np.ndarray:
+    def _to_numpy(self, groups, data, name='groups',none_replace=None) -> np.ndarray:
         """helper function for transforming groups into a numpy array of unique values
         parameters
         ----------
@@ -133,10 +141,12 @@ class FairPredictor:
         -------
         numpy array
         """
+        if data is None:
+            data = self.validation_data
         if groups is None and isinstance(data, dict):
-            groups=data.get('groups', None)
+            groups = data.get(name, None)
         if groups is None:
-            groups = self.groups
+            groups = none_replace
         if isinstance(data, dict):
             data=data['data']
         if groups is False:
@@ -149,6 +159,31 @@ class FairPredictor:
         if  isinstance(groups,int):
             return np.asarray(data[:,groups])
         return groups
+    
+    def groups_to_numpy(self, groups, data):
+        """helper function for transforming groups into a numpy array of unique values
+        parameters
+        ----------
+        groups: one of the standard represenations of groups (see class doc)
+        data: a pandas dataframe, numpy array, or a dict containing data
+        returns
+        -------
+        numpy array
+        """
+        return self._to_numpy(groups,data,'groups',self.groups)
+    
+    def cond_fact_to_numpy(self, fact, data):
+        """helper function for transforming fact into a numpy array of unique values
+        parameters
+        ----------
+        fact: one of the standard represenations of conditioning factor
+        data: a pandas dataframe, numpy array, or a dict containing data
+        returns
+        -------
+        numpy array
+        """
+        return self._to_numpy(fact,data,'cond_fact',self.conditioning_factor)
+    
 
     def fit(self, objective, constraint=group_metrics.accuracy, value=0.0, *,
             greater_is_better_obj=None, greater_is_better_const=None,
@@ -233,14 +268,15 @@ class FairPredictor:
         -------
         Nothing
         """
-        self.objective1 = objective1
-        self.objective2 = objective2
+        self.objective1 :BaseGroupMetric = objective1
+        self.objective2 :BaseGroupMetric = objective2
 
         if self.use_fast is False:
+            factor = self.cond_fact_to_numpy(self.conditioning_factor,self.validation_data)
             if _needs_groups(objective1):
-                objective1 = fix_groups(objective1, self._internal_groups)
+                objective1 = fix_groups_and_conditioning(objective1, self._internal_groups,factor)
             if _needs_groups(objective2):
-                objective2 = fix_groups(objective2, self._internal_groups)
+                objective2 = fix_groups_and_conditioning(objective2, self._internal_groups,factor)
         direction = np.ones(2)
         if greater_is_better_obj1 is False:
             direction[0] = -1
@@ -261,11 +297,13 @@ class FairPredictor:
         if tol is not False:
             proba = np.around(self.proba / tol) * tol
         if self.use_fast:
+            fact = self.cond_fact_to_numpy(self.conditioning_factor,self.validation_data)
             self.frontier = efficient_compute.grid_search(self.y_true, proba, objective1,
                                                           objective2,
                                                           self._val_thresholds.argmax(1),
                                                           self._internal_groups, steps=grid_width,
-                                                          directions=direction)
+                                                          directions=direction,
+                                                          factor=fact)
         else:
             coarse_thresh = np.asarray(self._val_thresholds, dtype=np.float16)
             self.frontier = fair_frontier.build_coarse_to_fine_front(objective1, objective2,
@@ -338,20 +376,20 @@ class FairPredictor:
                     val_thresholds=call_or_get_proba(self.inferred_groups,data['data'])
                 else:
                     val_thresholds = call_or_get_proba(self.inferred_groups,data)
-        print(val_thresholds.shape,groups.shape,labels.shape,proba.shape)
         if self.use_fast is False:
+            factor = self.cond_fact_to_numpy(self.conditioning_factor,self.validation_data)
             if _needs_groups(objective1):
-                objective1 = fix_groups(objective1, groups)
+                objective1 = fix_groups_and_conditioning(objective1, self._internal_groups,factor)
             if _needs_groups(objective2):
-                objective2 = fix_groups(objective2, groups)
+                objective2 = fix_groups_and_conditioning(objective2, self._internal_groups,factor)
 
             front1 = fair_frontier.compute_metric(objective1, labels, proba,
                                                   val_thresholds, self.frontier[1])
             front2 = fair_frontier.compute_metric(objective2, labels, proba,
                                                   val_thresholds, self.frontier[1])
 
-            zero = [dispatch_metric(objective1, labels, proba, groups),
-                    dispatch_metric(objective2, labels, proba, groups)]
+            zero = [dispatch_metric(objective1, labels, proba, groups, factor),
+                    dispatch_metric(objective2, labels, proba, groups, factor)]
 
             front1_u = fair_frontier.compute_metric(objective1, labels, proba,
                                                     val_thresholds, self.offset[:, :, np.newaxis])
@@ -413,7 +451,7 @@ class FairPredictor:
 
         return self.evaluate_fairness(data, groups, metrics=metrics, verbose=verbose)
 
-    def evaluate_fairness(self, data=None, groups=None, *, metrics=None, verbose=False) -> pd.DataFrame:
+    def evaluate_fairness(self, data=None, groups=None, factor=None, *, metrics=None, verbose=False) -> pd.DataFrame:
         """Compute standard fairness metrics for the orginal predictor and the new predictor
          found by fit. If fit has not been called return a dataframe containing
          only the metrics of the original predictor.
@@ -433,7 +471,7 @@ class FairPredictor:
         ['original', 'updated']
          """
         _guard_predictor_data_match(data,self.predictor)
-
+        factor = self.cond_fact_to_numpy(factor, data)
         if metrics is None:
             metrics = group_metrics.clarify_metrics
 
@@ -452,18 +490,18 @@ class FairPredictor:
                     labels = (labels == self.predictor.positive_class) * 1
         groups = self.groups_to_numpy(groups, data)
 
-        collect = self.fairness_metrics(labels, y_pred_proba, groups, metrics, verbose=verbose)
+        collect = self.fairness_metrics(labels, y_pred_proba, groups, metrics, factor, verbose=verbose)
         collect.columns = ['original']
 
         if np.any(self.offset):
             y_pred_proba = self.predict_proba(data)
-            new_pd = self.fairness_metrics(labels, y_pred_proba, groups, metrics, verbose=verbose)
+            new_pd = self.fairness_metrics(labels, y_pred_proba, groups, metrics, factor, verbose=verbose)
             new_pd.columns = ['updated']
             collect = pd.concat([collect, new_pd], axis='columns')
         return collect
 
     def fairness_metrics(self, y_true: np.ndarray, proba, groups: np.ndarray,
-                        metrics, *, verbose=False) -> pd.DataFrame:
+                        metrics, factor, *, verbose=False) -> pd.DataFrame:
         """Helper function for evaluate_fairness
         Report fairness metrics that do not require additional information.
         parameters
@@ -484,11 +522,11 @@ class FairPredictor:
                 names.append(k)
             else:
                 names.append(metrics[k].name)
-            values[i] = dispatch_metric(metrics[k], y_true, proba, groups)
+            values[i] = dispatch_metric(metrics[k], y_true, proba, groups, factor)
 
         return pd.DataFrame(values, index=names)
 
-    def evaluate_groups(self, data=None, groups=None, metrics=None, *, return_original=False,
+    def evaluate_groups(self, data=None, groups=None, metrics=None, fact=None, *, return_original=False,
                         verbose=False):
         """Evaluate standard metrics per group and returns dataframe.
         parameters
@@ -539,18 +577,20 @@ class FairPredictor:
 
 
         groups = self.groups_to_numpy(groups, data)
-
+        fact = self.cond_fact_to_numpy(fact,data)
         if return_original:
             original = self.evaluate_predictor_binary(y_true,
                                                       orig_pred_proba,
                                                       groups,
                                                       metrics=metrics,
+                                                      fact=fact,
                                                       verbose=verbose)
 
         updated = self.evaluate_predictor_binary(y_true,
                                                  new_pred_proba,
                                                  groups,
                                                  metrics=metrics,
+                                                 fact=fact,
                                                  verbose=verbose)
 
         out = updated
@@ -558,7 +598,7 @@ class FairPredictor:
             out = pd.concat([original, updated], keys=['original', 'updated'])
         return out
 
-    def evaluate_predictor_binary(self, y_true, proba, groups, metrics, *, verbose=True) -> pd.DataFrame:
+    def evaluate_predictor_binary(self, y_true, proba, groups, metrics, fact, *, verbose=True) -> pd.DataFrame:
         """Helper function for evaluate_groups
         Compute standard per-group  metrics for binary classification
         parameters
@@ -579,11 +619,11 @@ class FairPredictor:
 
         names = metrics.keys()
         names = list(names)
-
-        overall_scores = list(map(lambda n: dispatch_metric(metrics[n], y_true, proba, groups),
-                                  names))
-        scores = list(map(lambda n: dispatch_metric_per_group(metrics[n], y_true, proba, groups),
-                          names))
+        
+        overall_scores = list(map(lambda n: dispatch_metric(metrics[n], y_true, proba, groups, 
+                                                            fact), names))
+        scores = list(map(lambda n: dispatch_metric_per_group(metrics[n], y_true, proba, groups,
+                                                               fact),names))
 
         scores = np.stack(scores)
         overall_scores = np.stack(overall_scores)
@@ -736,8 +776,54 @@ def fix_groups(metric: BaseGroupMetric, groups):
         return metric(y_true, y_pred, groups)
     return new_metric
 
+def fix_conditioning(metric: BaseGroupMetric, conditioning_factor):
+    """fixes the choice of groups so that BaseGroupMetrics can be passed as Scorable analogs to the
+    slow pathway.
 
-def dispatch_metric(metric, y_true, proba, groups) -> np.ndarray:
+    Parameters
+    ----------
+    metric: a BaseGroupMetric
+    groups: a 1D pandas dataframe or numpy array
+
+    Returns
+    -------
+    a function that takes y_true and y_pred as an input.
+
+        todo: return scorable"""
+    if metric.cond_weights is None:
+        Warning.warning("Fixing conditoning factor on a metric that doesn't use it.")
+        return metric
+    conditioning_factor = np.asarray(conditioning_factor)
+
+    def new_metric(y_true: np.ndarray, y_pred: np.ndarray, groups) -> np.ndarray:
+        return metric(y_true, y_pred, groups,conditioning_factor)
+    return new_metric
+
+def fix_groups_and_conditioning(metric: BaseGroupMetric, groups, conditioning_factor):
+    """fixes the choice of groups and conditioning factor so that BaseGroupMetrics can be passed as Scorable analogs to the
+    slow pathway.
+
+    Parameters
+    ----------
+    metric: a BaseGroupMetric
+    groups: a 1D pandas dataframe or numpy array
+
+    Returns
+    -------
+    a function that takes y_true and y_pred as an input.
+
+        todo: return scorable"""
+    if metric.cond_weights is None:
+        return fix_groups(metric, groups)
+
+    conditioning_factor = np.asarray(conditioning_factor)
+
+    def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+        return metric(y_true, y_pred, groups,groups, conditioning_factor)
+    return new_metric
+
+
+def dispatch_metric(metric: BaseGroupMetric, y_true, proba, groups, factor) -> np.ndarray:
     """Helper function for making sure different types of Scorer and GroupMetrics get the right data
 
     Parameters
@@ -754,7 +840,10 @@ def dispatch_metric(metric, y_true, proba, groups) -> np.ndarray:
     proba = np.asarray(proba)
     try:
         if isinstance(metric, BaseGroupMetric):
-            return metric(y_true, proba.argmax(1), groups)[0]
+            if metric.cond_weights is None:
+                return metric(y_true, proba.argmax(1), groups)[0]
+            else:
+                return metric(y_true, proba.argmax(1), groups,factor)[0]
 
         if isinstance(metric, Scorer) and (metric.needs_pred is False):
             return metric(y_true, proba[:, 1] - proba[:, 0])
@@ -765,7 +854,7 @@ def dispatch_metric(metric, y_true, proba, groups) -> np.ndarray:
 
 
 def dispatch_metric_per_group(metric, y_true: np.ndarray, proba: np.ndarray,
-                              groups: np.ndarray) -> np.ndarray:
+                              groups: np.ndarray, factor:np.ndarray) -> np.ndarray:
     """Helper function for making sure different types of Scorer and GroupMetrics get the right data
     parameters
     ----------
@@ -777,8 +866,12 @@ def dispatch_metric_per_group(metric, y_true: np.ndarray, proba: np.ndarray,
     returns
     -------
     a numpy array containing the per group score provided by metrics """
+    
     if isinstance(metric, group_metrics.GroupMetric):
-        return metric.per_group(y_true, proba.argmax(1), groups)[0]
+        if metric.cond_weights is None:
+            return metric.per_group(y_true, proba.argmax(1), groups)[0]
+        
+        return metric.per_group(y_true, proba.argmax(1), groups, factor)[0]
     unique = np.unique(groups)
     out = np.empty_like(unique, dtype=float)
     if isinstance(metric, Scorer) and (metric.needs_pred is False):
