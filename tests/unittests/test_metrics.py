@@ -1,10 +1,6 @@
 import numpy as np
-from autogluon.tabular import TabularDataset, TabularPredictor
 from autogluon.core import metrics
-import oxonfair as fair
-from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
-
 
 def test_metrics():
     "check that core.metrics give the same answer as group metrics"
@@ -29,7 +25,7 @@ def test_metrics():
 
 
 def test_metrics_identities():
-    """ sanity check, make sure metrics are consistent with standard identities.
+    """ validity check, make sure metrics are consistent with standard identities.
      This combined with test metrics gives coverage of everything up to the clarify metrics"""
     array1 = np.random.randint(0, 2, 100)
     array2 = np.random.randint(0, 2, 100)
@@ -49,4 +45,3 @@ def test_metrics_identities():
     assert np.isclose(gm.equalized_odds(array1, array2, array3),
                       (gm.true_pos_rate.diff(array1, array2, array3)
                        + gm.true_neg_rate.diff(array1, array2, array3)) / 2).all()
-

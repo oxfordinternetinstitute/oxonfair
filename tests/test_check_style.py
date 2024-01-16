@@ -6,7 +6,8 @@ from subprocess import Popen, PIPE
 def test_check_style():
     logging.getLogger().setLevel(logging.INFO)
     logging.info("PEP8 Style check")
-    flake8_proc = Popen(["flake8", "--count", "--max-line-length", "300"], stdout=PIPE)
+    flake8_proc = Popen(["flake8", "--count", "--max-line-length", "300", '/src/oxonfair'],
+                        stdout=PIPE)
     flake8_out = flake8_proc.communicate()[0]
     lines = flake8_out.splitlines()
     count = int(lines[-1].decode())

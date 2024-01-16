@@ -4,7 +4,7 @@ from abc import abstractmethod
 import logging
 import copy
 
-from typing import Callable, Tuple
+from typing import Any, Callable, Tuple
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -12,17 +12,22 @@ logger = logging.getLogger(__name__)
 
 class BaseGroupMetric:
     """building block for GroupMetrics. It does book keeping allowing group metrics to take as raw
-    input either a single array containing t_pos,f_pos,f_neg,t_neg values broadcast over groups and many
-    different thresholds, or singular vectors corresponding to y_true, y_pred, and groups.
+    input either a single array containing t_pos,f_pos,f_neg,t_neg values broadcast over groups and
+    many different thresholds, or singular vectors corresponding to y_true, y_pred, and groups.
     Also contains additional annotations: name, and greater_is_better
     """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, func: Callable[[np.ndarray, np.ndarray, np.ndarray, np.ndarray], np.ndarray],
-                 name: str, greater_is_better: bool) -> None:
+                 name: str, greater_is_better: bool, cond_weights=None) -> None:
         self.func: Callable[[np.ndarray, np.ndarray, np.ndarray, np.ndarray], np.ndarray] = func
         self.name: str = name
         self.greater_is_better: bool = greater_is_better
+        if cond_weights is None:
+            self.cond_weights=None
+        else:
+            assert isinstance(cond_weights,ConditionalWeighting), "cond_weights must be a Conditional Metric"
+            self.cond_weights = cond_weights
 
     @abstractmethod
     def __call__(self, *args: np.ndarray) -> np.ndarray:
@@ -47,11 +52,20 @@ class BaseGroupMetric:
                 logger.error('Only one argument passed to group metric, but the first dimension is not 4.')
             return args[0][3], args[0][2], args[0][1], args[0][0]
             # N.B. order reversed
-        if len(args) != 3:
-            logger.error('Group metrics can take either one broadcast array or three broadcast array')
+        if len(args) != 3 and len(args) != 4:
+            logger.error('Group metrics can take either one, three, or four broadcast arrays')
+        
+        if len(args) == 4 and self.cond_weights is None:
+            logger.error('Metric called with four inputs, indicating that we should condition, but no conditioning function provided.')
+        
         y_true: np.ndarray = args[0].astype(int)
         y_pred: np.ndarray = args[1].astype(int)
         groups: np.ndarray = args[2]
+        if len(args) ==4 :
+            weights =  self.cond_weights(args[3], groups, y_true)
+        else:
+            weights = False
+        
         if not y_true.size == y_pred.size == groups.size:
             logger.error('Inputs to group_metric are of different sizes.')
             assert y_true.size == y_pred.size == groups.size
@@ -63,16 +77,28 @@ class BaseGroupMetric:
         out = np.zeros((4, 1, unique.shape[0]))
         for i, group_name in enumerate(unique):
             mask = (groups == group_name)
-            out[0, :, i] = t_pos[mask].sum()
-            out[1, :, i] = f_pos[mask].sum()
-            out[2, :, i] = f_neg[mask].sum()
-            out[3, :, i] = t_neg[mask].sum()
+            if weights is False:
+                out[0, :, i] = t_pos[mask].sum()
+                out[1, :, i] = f_pos[mask].sum()
+                out[2, :, i] = f_neg[mask].sum()
+                out[3, :, i] = t_neg[mask].sum()
+            else:
+                w = weights[mask]
+                out[0, :, i] = t_pos[mask].dot(w)
+                out[1, :, i] = f_pos[mask].dot(w)
+                out[2, :, i] = f_neg[mask].dot(w)
+                out[3, :, i] = t_neg[mask].dot(w)
         return out[0], out[1], out[2], out[3]
 
-    def rename(self, new_name: str):
-        "Generates a copy of self with a new name"
+    def clone(self, new_name: str, cond_weights=False):
+        """Generates a copy of self with a new name, and (optionally) a new cond_weights
+        Use cond_weights = False to use the existing cond_weights in the metric being cloned.
+            cond_weights =  None to remove it
+            cond_weights = ConditionalMetric in any other case"""
         out = copy.copy(self)
         out.name = new_name
+        if cond_weights is not False:
+            out.cond_weights = cond_weights
         return out
 
 
@@ -171,28 +197,33 @@ class GroupMetric(BaseGroupMetric):
     """
 
     def __init__(self, func: Callable[[np.ndarray, np.ndarray, np.ndarray, np.ndarray], np.ndarray],
-                 name: str, greater_is_better: bool = True) -> None:
-        super().__init__(func, name, greater_is_better)
+                 name: str, greater_is_better: bool = True, cond_weights = None) -> None:
+        super().__init__(func, name, greater_is_better,cond_weights=cond_weights)
         self.max: GroupMax = GroupMax(func, 'Maximal Group ' + name,
-                                      greater_is_better=greater_is_better)
+                                      greater_is_better=greater_is_better, cond_weights=cond_weights)
         self.min: GroupMin = GroupMin(func, 'Minimal Group ' + name,
-                                      greater_is_better=greater_is_better)
+                                      greater_is_better=greater_is_better, cond_weights=cond_weights)
         self.overall: Overall = Overall(func, 'Overall ' + name,
-                                        greater_is_better=greater_is_better)
+                                        greater_is_better=greater_is_better, cond_weights=cond_weights)
         self.average: GroupAverage = GroupAverage(func, 'Average Group ' + name,
-                                                  greater_is_better=greater_is_better)
+                                                  greater_is_better=greater_is_better, 
+                                                  cond_weights=cond_weights)
         self.diff: GroupDiff = GroupDiff(func, 'Maximal Group Difference in ' + name,
-                                         greater_is_better=False)
+                                         greater_is_better=False, cond_weights=cond_weights)
         self.av_diff: GroupAvDiff = GroupAvDiff(func, 'Average Group Difference in ' + name,
-                                                greater_is_better=False)
+                                                greater_is_better=False, cond_weights=cond_weights)
         self.ratio: GroupRatio = GroupRatio(func, 'Minimal Group Ratio in ' + name,
-                                            greater_is_better=True)
+                                            greater_is_better=True, cond_weights=cond_weights)
         self.per_group: PerGroup = PerGroup(func, 'Per Group ' + name,
-                                            greater_is_better=greater_is_better)
+                                            greater_is_better=greater_is_better,
+                                            cond_weights=cond_weights)
 
-    def rename(self, new_name):
+    def clone(self, new_name, cond_weights=False):
         my_type = self.__class__
-        out = my_type(self.func, new_name, self.greater_is_better)
+        if cond_weights is False:
+            out = my_type(self.func, new_name, self.greater_is_better, self.cond_weights)
+        else:
+            out = my_type(self.func, new_name, self.greater_is_better, cond_weights)
         return out
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
@@ -217,6 +248,7 @@ class AddGroupMetrics(BaseGroupMetric):
         self.metric1: BaseGroupMetric = metric1
         self.metric2: BaseGroupMetric = metric2
         self.name = name
+        self.cond_weights = None
         if metric1.greater_is_better != metric2.greater_is_better:
             logger.error('Metric1 and metric2  must satisfy the condition. metric1.greater_is_better == metric2.greater_is_better ')
         if not 0 <= weight <= 1:
@@ -236,7 +268,7 @@ class Utility(GroupMetric):
     are all supported.
     Parameters
     ----------
-    utility: a list of length 4 corresponding to the cost of true positives,
+    utility: a sequence of length 4 corresponding to the cost of true positives,
              false positive, false negatives, and true negatives
     name: a string corresponding to the name of the utility function
     greater_is_better: a bool indicating if the utility should be maximised or minimized
@@ -252,3 +284,43 @@ class Utility(GroupMetric):
         "Method for computing the cost/utility"
         return (t_pos * self.utility[0] + f_pos * self.utility[1] + f_neg * self.utility[2]
                 + t_neg * self.utility[3]) / (t_pos + f_pos + f_neg + t_neg)
+
+class ConditionalWeighting:
+    """This is used to implement a range of conditional metrics analgous to those set out in Why fairness can not be automated and statistics 
+    (cite properly)
+    The metrics are useful when you want to (for example) to ensure that individual schools should not discriminate in aggrigate
+    against men and women, but different schools may have different acceptance rates, and have different rates of men 
+    and women applying there.
+    """
+    def __init__(self, per_group):
+        self.per_group = per_group
+        
+    def __call__(self, conditioning_factor:np.array, groups:np.array, y_true:np.array) -> np.array:
+        assert conditioning_factor.shape == y_true.shape
+        assert groups.shape ==  y_true.shape
+        weights = np.zeros_like(y_true, dtype=float)
+        uniq_f = np.unique(conditioning_factor)
+        uniq_g = np.unique(groups)
+    
+        factor_masks = {}
+        factor_weights = {}
+        total_pos = y_true.sum()
+        total_neg = y_true.shape[0] - total_pos
+        for f in uniq_f:
+            mask = conditioning_factor == f
+            factor_masks[f] = mask
+            factor_pos = y_true[mask].sum()
+            factor_neg = mask.sum() - factor_pos
+            factor_weights[f] = self.per_group(total_pos,total_neg,factor_pos, factor_neg)
+        for g in uniq_g:
+            mask = groups == g
+            group_pos = y_true[mask].sum()
+            group_neg =  mask.sum() - group_pos
+            for f in uniq_f:
+                new_mask = mask * factor_masks[f]
+                factor_sub_pos =   y_true[new_mask].sum()
+                factor_sub_neg = new_mask.sum() -factor_sub_pos
+                weights[new_mask] = self.per_group(group_pos, group_neg,
+                                                   factor_sub_pos, factor_sub_neg)/factor_weights[f]
+        return weights
+     

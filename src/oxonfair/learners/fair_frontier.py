@@ -22,7 +22,7 @@ def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
             pred = (proba + tmp).argmax(-1)
             score[i] = metric(y_true, pred)
         else:
-            add = (proba + tmp)
+            add = proba + tmp
             diff = add[:, 1] - add[:, 0]
             score[i] = metric(y_true, diff)
     return score
@@ -205,7 +205,8 @@ def build_coarse_to_fine_front(metric_1: callable,
     mins -= 2 / initial_divisions  # if we only get one point, expand around it
     maxs += 2 / initial_divisions
     eps = ((maxs - mins))
-    new_weights = make_grid_between_points(mins, maxs, refinement_factor=initial_divisions, add_zero=True)
+    new_weights = make_grid_between_points(mins, maxs, refinement_factor=initial_divisions,
+                                            add_zero=True)
     new_front = front_from_weights(new_weights, y_true, proba, groups_infered, (metric_1, metric_2))
     weights = np.concatenate((new_weights, weights), -1)
     front = np.concatenate((new_front, front), -1)

@@ -101,7 +101,7 @@ def test_subset(use_fast=True):
     assert all(full_group_metrics.loc['Maximum difference'] >= partial_group_metrics.loc['Maximum difference'])
 
 
-def disp_impact(predictor, new_test, use_fast):
+def test_disp_impact(use_fast=True):
     "Enforce the 4/5 rule that the max ratio between the proportion of positive decisions is less than 0.8"
     fpredictor = fair.FairPredictor(predictor, new_test, 'race', use_fast=use_fast)
     fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.8)

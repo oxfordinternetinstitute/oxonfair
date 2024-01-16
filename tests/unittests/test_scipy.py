@@ -1,12 +1,11 @@
 """Tests for FairPredictor"""
-import numpy as np
-import sklearn.tree
-classifier_type = sklearn.tree.DecisionTreeClassifier
-        
+import pandas as pd
+import sklearn.tree        
 import oxonfair as fair
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
-import pandas as pd
+classifier_type = sklearn.tree.DecisionTreeClassifier
+
 train_data = pd.read_csv('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')
 test_data = pd.read_csv('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
 
@@ -100,16 +99,16 @@ def test_recall_diff(use_fast=True):
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025,greater_is_better_obj=False)
     assert acc>fpredictor.evaluate()['updated']['accuracy']
 
-def disp_impact(predictor, new_test, use_fast):
-    "Enforce the 4/5 rule that the max ratio between the proportion of positive decisions is less than 0.8"
+def test_disp_impact(use_fast=True):
+    "Enforce the 4/5 rule that the worst ratio between the proportion of positive decisions is greater than 0.9"
     fpredictor = fair.FairPredictor(predictor, test_dict, 'sex_ Female', use_fast=use_fast)
-    fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.8)
+    fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.9)
 
     measures = fpredictor.evaluate_fairness()
 
-    assert measures['original']['disparate_impact'] < 0.8
+    assert measures['original']['disparate_impact'] < 0.9
 
-    assert measures['updated']['disparate_impact'] > 0.8
+    assert measures['updated']['disparate_impact'] > 0.9
 
 
 def test_min_recall(use_fast=True):
