@@ -141,8 +141,8 @@ def build_grid(accum_count: np.ndarray, bottom, top, metric1: Callable,
         2. the indicies corresponding to thresholds
         3. the step offset used.
     """
-    groups = len(bottom)
-
+    #assigned_groups = len(bottom)
+    groups = accum_count[0].shape[-1]
     step = [(t - b) / steps for t, b in zip(top, bottom)]
 
     mesh_indices = [np.unique(np.floor(np.arange(np.floor(b), np.ceil(t + 1),
@@ -280,7 +280,7 @@ def cumsum_zero(array: np.ndarray):
     return out
 
 
-def grid_search_no_weights(ordered_encode, groups, score,
+def grid_search_no_weights(ordered_encode, ass_size, score,
                            metric1, metric2, steps, directions):
     """Internal helper for grid search. 
     The weighted pathway requires x2 memory and computation so instead of compressing the cases 
@@ -294,13 +294,13 @@ def grid_search_no_weights(ordered_encode, groups, score,
     # at a particular value. It is of size (4, groups) because the group assignment may come at test
     # time from an inaccurate classifier
 
-    test_cum_sum(accum_count, groups)
+    test_cum_sum(accum_count, ass_size)
     # now for the computational bottleneck
-    bottom = np.zeros(groups)
+    bottom = np.zeros(ass_size)
     top = np.asarray([s.shape[0] for s in ordered_encode])
     score, mesh_indices, step = build_grid(accum_count, bottom, top, metric1, metric2, steps=steps)
 
-    indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(groups, -1)
+    indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(ass_size, -1)
 
     front, index = keep_front(score, indicies, directions)
     if index.shape[1] > 4:
@@ -311,7 +311,7 @@ def grid_search_no_weights(ordered_encode, groups, score,
     top = np.ceil(np.minimum(top, tindex.max(1) + step))
     score, mesh_indices, _ = build_grid(accum_count, bottom, top, metric1, metric2, steps=steps)
 
-    indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(groups, -1)
+    indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(ass_size, -1)
     return score, indicies, front, index
 
 def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
@@ -404,13 +404,15 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric
         logger.warning('Fewer groups used in infered groups than in the true groups')
     elif true_groups.max() < hard_assignment.max():
         logger.warning('Fewer groups used in true groups, than in the infered groups')
-    groups = max(hard_assignment.max(), true_groups.max()) + 1
-
+    assigned_labels = np.unique(hard_assignment) 
+    ass_size = assigned_labels.shape[0]
+    groups = true_groups.max() + 1
+    assigned_groups = hard_assignment.max() + 1
     # Preamble that reorganizes the data for efficient computation
     # This uses lists indexed by group rather than arrays
     # as there are different amounts of data per group
 
-    masks = [hard_assignment == g for g in range(groups)]
+    masks = [hard_assignment == g for g in assigned_labels]
     if unweighted_path:
         collate = [condense(score[m], y_true[m], 2, true_groups[m], groups) for m in masks]
     else:
@@ -442,11 +444,11 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric
     # add threshold above maximum value
 
     if unweighted_path:
-        score, indicies, front, index = grid_search_no_weights(ordered_encode, groups, score,
+        score, indicies, front, index = grid_search_no_weights(ordered_encode, ass_size, score,
                            metric1, metric2, steps, directions)
     else:
         score, indicies, front, index = grid_search_weights(ordered_encode, ordered_encode2,
-                                                            groups, score, metric1, metric2,
+                                                            ass_size, score, metric1, metric2,
                                                             steps, directions)
 
 

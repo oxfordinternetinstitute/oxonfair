@@ -42,10 +42,10 @@ class FairPredictor:
         1. The name of a pandas column containing discrete values
         2. a vector of the same size as the validation set containing discrete values
         3. The value None   (used when we don't require groups, for example,
-               if we are optimizing F1 without per-group thresholds, or if groups are explicitly
+          if we are optimizing F1 without per-group thresholds, or if groups are explicitly
                specified by a dict in validation data)
-    inferred_groups: (Optional, default False) A binary or multiclass autogluon predictor that
-        infers the protected attributes.
+    inferred_groups: (Optional, default False) A binary or multiclass autogluon predictor that infers the protected
+                                attributes.
         This can be used to enforce fairness when no information about protected attribtutes is
         avalible at test time. If this is not false, fairness will be measured using the variable
         'groups', but enforced using the predictor response.
@@ -57,11 +57,10 @@ class FairPredictor:
 
     def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
                  add_noise=False,
-                 use_fast=True,conditioning_factor=None) -> None:
+                 use_fast=True,conditioning_factor=None ,threshold=0.7) -> None:
         if predictor is None:
             def predictor(x):
                 return x
-
         if not (is_not_autogluon(predictor)) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
 
@@ -74,6 +73,7 @@ class FairPredictor:
         # i.e. groups = None
         # and there are no groups i.e. groups = False
         # However, as a user interface groups = None makes more sense for instantiation.
+        self.threshold = threshold
         self.groups = groups
         self.use_fast: bool = use_fast
         self.conditioning_factor = conditioning_factor
@@ -153,7 +153,7 @@ class FairPredictor:
             return np.zeros(data.shape[0])
 
         if callable(groups):
-            return groups(data).argmax(1)
+            return self.infered_to_hard(groups(data))
         if isinstance(groups, str):
             return np.asarray(data[groups])
         if  isinstance(groups,int):
@@ -183,7 +183,15 @@ class FairPredictor:
         numpy array
         """
         return self._to_numpy(fact,data,'cond_fact',self.conditioning_factor)
-    
+
+    def infered_to_hard(self,infered):
+        if self.inferred_groups is False or self.threshold == 0:
+            return infered.argmax(1)    
+        
+        drop = infered.max(1) < self.threshold
+        out = infered.argmax(1)+1
+        out[drop] = 0
+        return out
 
     def fit(self, objective, constraint=group_metrics.accuracy, value=0.0, *,
             greater_is_better_obj=None, greater_is_better_const=None,
@@ -268,8 +276,8 @@ class FairPredictor:
         -------
         Nothing
         """
-        self.objective1 :BaseGroupMetric = objective1
-        self.objective2 :BaseGroupMetric = objective2
+        self.objective1 = objective1
+        self.objective2 = objective2
 
         if self.use_fast is False:
             factor = self.cond_fact_to_numpy(self.conditioning_factor,self.validation_data)
@@ -300,7 +308,7 @@ class FairPredictor:
             fact = self.cond_fact_to_numpy(self.conditioning_factor,self.validation_data)
             self.frontier = efficient_compute.grid_search(self.y_true, proba, objective1,
                                                           objective2,
-                                                          self._val_thresholds.argmax(1),
+                                                          self.infered_to_hard(self._val_thresholds),
                                                           self._internal_groups, steps=grid_width,
                                                           directions=direction,
                                                           factor=fact)
@@ -399,19 +407,19 @@ class FairPredictor:
         else:
             front1 = efficient_compute.compute_metric(objective1, labels, proba,
                                                       groups,
-                                                      val_thresholds.argmax(1), self.frontier[1])
+                                                      self.infered_to_hard(val_thresholds), self.frontier[1])
             front2 = efficient_compute.compute_metric(objective2, labels, proba,
                                                       groups,
-                                                      val_thresholds.argmax(1), self.frontier[1])
+                                                      self.infered_to_hard(val_thresholds), self.frontier[1])
 
             zero = [objective1(labels, proba.argmax(1), groups),
                     objective2(labels, proba.argmax(1), groups)]
 
             front1_u = efficient_compute.compute_metric(objective1, labels, proba, groups,
-                                                        val_thresholds.argmax(1),
+                                                        self.infered_to_hard(val_thresholds),
                                                         self.offset[:, np.newaxis])
             front2_u = efficient_compute.compute_metric(objective2, labels, proba, groups,
-                                                        val_thresholds.argmax(1),
+                                                        self.infered_to_hard(val_thresholds),
                                                         self.offset[:, np.newaxis])
         if color is None:
             plt.scatter(front2, front1, label='Frontier')
@@ -676,7 +684,7 @@ class FairPredictor:
                 onehot = call_or_get_proba(self.inferred_groups, data)
         if self.use_fast:
             tmp = np.zeros_like(proba)
-            tmp[:, 1] = self.offset[onehot.argmax(1)]
+            tmp[:, 1] = self.offset[self.infered_to_hard(onehot)]
         else:
             tmp = onehot.dot(self.offset)
         if self.round is not False:
