@@ -27,15 +27,14 @@ class FairPredictor:
         1. An autogluon binary predictor.
         2. A sklearn classifier.
         3. An arbitary function 
-        4. The value None. 
-        If None  is used, we assume that we are rescoring predictions already made elsewhere, and 
-        the validation data should be a copy of the classifier outputs.
+        
     validation_data: This can be:
         1. a pandas dataframe that can be read by predictor.
         2. a dict contain mutliple entries
             'data' containing a pandas dataframe or numpy array to be fed to the classifier.
             'target' the ground truth-labels used to evaluate classifier peformance.
-            'groups' (optional)  
+            'groups' (optional)
+            'cond_factor'  
     groups (optional, default None): is an indicator of protected attributes, i.e.  the discrete
         groups used to measure fairness
     it may be:
@@ -53,11 +52,17 @@ class FairPredictor:
     If use_fast is True, the fair search is much more efficient, but the objectives must take the
     form of a GroupMetric
     If use_fast is False, autogluon scorers are also supported.
+    conditioning_factor (optional, default None) Used to specify the factor conditional metrics are conditioned on.
+    Takes the same form as groups.
+    Threshold (optional, default 0) used in use_fast pathway. Adds an extra catagory of uncertain group when infering attributes.
+    If a datapoint has no response from the inferred_groups classifier above the threshold 
+    then it is assigned to the uncertain group. Tuning this value may help improve fairness/performance trade-offs.
+    When set to 0 it is off.   
     """
 
     def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
                  add_noise=False,
-                 use_fast=True,conditioning_factor=None ,threshold=0.7) -> None:
+                 use_fast=True,conditioning_factor=None ,threshold=0.0) -> None:
         if predictor is None:
             def predictor(x):
                 return x
@@ -88,7 +93,7 @@ class FairPredictor:
                     logger.warning("""Groups passed twice to fairpredictor both as part of
                                    the dataset and as an argument. The argument will be used.""")
             if conditioning_factor is False:
-                conditioning_factor = validation_data.get('cond_fact', False)
+                conditioning_factor = validation_data.getc, False)
                 self.conditioning_factor = conditioning_factor
             else:
                 if validation_data.get('cond_fact', False) is not False:
