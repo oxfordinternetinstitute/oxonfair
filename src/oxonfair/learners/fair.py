@@ -190,6 +190,7 @@ class FairPredictor:
         return self._to_numpy(fact,data,'cond_fact',self.conditioning_factor)
 
     def infered_to_hard(self,infered):
+        "Map the output of infered groups into a hard assignment for use in the fast pathway"
         if self.inferred_groups is False or self.threshold == 0:
             return infered.argmax(1)    
         
@@ -200,7 +201,7 @@ class FairPredictor:
 
     def fit(self, objective, constraint=group_metrics.accuracy, value=0.0, *,
             greater_is_better_obj=None, greater_is_better_const=None,
-            recompute=True, tol=False, grid_width=False):
+            recompute=True, tol=False, grid_width=False,threshold=None):
         """Fits the chosen predictor to optimize an objective while satisfing a constraint.
         parameters
         ----------
@@ -225,10 +226,15 @@ class FairPredictor:
         grid_width: allows manual specification of the grid size. N.B. the overall computational
                     budget is O(grid_width**groups)
                  By default the grid_size is 30
+        threshold: A float between 0 and 1 or None. If threshold is not None, this overwrites 
+                    the threshold used for assignment to a "don't know class" in the hard assignment 
+                    of inferened groups.
         returns
         -------
         Nothing
         """
+        if threshold is not None:
+            self.threshold = threshold 
         if greater_is_better_obj is None:
             greater_is_better_obj = objective.greater_is_better
         if greater_is_better_const is None:
@@ -327,7 +333,7 @@ class FairPredictor:
                                                                      initial_divisions=grid_width)
 
     def plot_frontier(self, data=None, groups=None, objective1=False, objective2=False,
-                        show_updated=True, color=None, new_plot=True) -> None:
+                        show_updated=True, show_original=True, color=None, new_plot=True, prefix='',name_frontier='Frontier') -> None:
         """ Plots an existing parato frontier with respect to objective1 and objective2.
             These do not need to be the same objectives as used when computing the frontier
             The original predictor, and the predictor selected by fit is shown in different colors.
@@ -346,6 +352,8 @@ class FairPredictor:
             color: (optional, default None) Specify the color the frontier should be plotted in. 
             new_plot: (optional, default True) specifies if plt.figure() should be called at the
             start or if an existing plot should be overlayed
+            prefix (optional string) an additional prefix string that will be added to the legend for
+            frontier and updated predictor. 
         """
         _guard_predictor_data_match(data,self.predictor)
         if self.frontier is None:
@@ -427,10 +435,11 @@ class FairPredictor:
                                                         self.infered_to_hard(val_thresholds),
                                                         self.offset[:, np.newaxis])
         if color is None:
-            plt.scatter(front2, front1, label='Frontier')
-            plt.scatter(zero[1], zero[0],s=40, label='Original predictor',marker='*')
+            plt.scatter(front2, front1, label=prefix+name_frontier)
+            if show_original:
+                plt.scatter(zero[1], zero[0],s=40, label='Original predictor',marker='*')
             if show_updated:
-                plt.scatter(front2_u, front1_u, s=40, label='Updated predictor',marker='P')
+                plt.scatter(front2_u, front1_u, s=40, label=prefix+'Updated predictor',marker='P')
             plt.legend(loc='best')
         else:
             plt.scatter(front2, front1, c=color)

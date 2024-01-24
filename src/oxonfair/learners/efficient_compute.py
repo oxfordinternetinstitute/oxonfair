@@ -399,15 +399,15 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric
     encoder = OrdinalEncoder()
     encoder.fit(true_groups.reshape(-1, 1))
     true_groups = encoder.transform(true_groups.reshape(-1, 1)).reshape(-1).astype(int)
+    assigned_labels = np.arange(hard_assignment.max()+1)
 
-    if true_groups.max() > hard_assignment.max():
+    if true_groups.max() > assigned_labels.size:
         logger.warning('Fewer groups used in infered groups than in the true groups')
-    elif true_groups.max() < hard_assignment.max():
-        logger.warning('Fewer groups used in true groups, than in the infered groups')
-    assigned_labels = np.unique(hard_assignment) 
+    elif true_groups.max() + 1 < assigned_labels.size:
+        logger.warning('Substantially fewer groups used in true groups, than in the infered groups')
+   
     ass_size = assigned_labels.shape[0]
     groups = true_groups.max() + 1
-    assigned_groups = hard_assignment.max() + 1
     # Preamble that reorganizes the data for efficient computation
     # This uses lists indexed by group rather than arrays
     # as there are different amounts of data per group
@@ -457,6 +457,12 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric
     front, index = keep_front(np.concatenate((front, new_front), 1),
                               np.concatenate((index, new_index), 1),
                               directions)
-    selected_thresholds = np.asarray([(g[i] + g[np.minimum(g.shape[0] - 1, i + 1)]) / 2
+    def av_thresh(thresh,index):
+        if thresh.size == 0:
+            return np.zeros(index.shape)
+        iplus1 = np.minimum(thresh.shape[0] - 1, index + 1)
+        return (thresh[index] + thresh[iplus1]) / 2
+    
+    selected_thresholds = np.asarray([av_thresh(g,i)
                                       for g, i in zip(thresholds, index)])
     return front, selected_thresholds

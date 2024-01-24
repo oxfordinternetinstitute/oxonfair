@@ -68,8 +68,10 @@ def test_class(use_fast=True):
     fpredictor.fit(gm.balanced_accuracy,cgm.pos_pred_rate.diff,0.02)
     fpredictor.plot_frontier()
     fpredictor.evaluate_fairness()
+    fpredictor.evaluate_fairness(metrics=cgm.cond_disparities)
     fpredictor.evaluate_groups()
     fpredictor.evaluate_groups(metrics=cgm.cond_measures)
+
 
 def test_class_slow():
     test_class(False)
