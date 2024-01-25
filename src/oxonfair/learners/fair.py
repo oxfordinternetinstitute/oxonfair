@@ -27,7 +27,10 @@ class FairPredictor:
         1. An autogluon binary predictor.
         2. A sklearn classifier.
         3. An arbitary function 
-        
+        4. The value None. 
+        If None  is used, we assume that we are rescoring predictions already made elsewhere, and 
+        the validation data should be a copy of the classifier outputs.
+
     validation_data: This can be:
         1. a pandas dataframe that can be read by predictor.
         2. a dict contain mutliple entries
@@ -94,8 +97,8 @@ class FairPredictor:
                     logger.warning("""Groups passed twice to fairpredictor both as part of
                                    the dataset and as an argument. The argument will be used.""")
             if conditioning_factor is False:
-                conditioning_factor = validation_data.getc, False)
-                self.conditioning_factor = conditioning_factor
+                conditioning_factor = validation_data.get('cond_fact', False)
+                #Do not update self.conditioning otherwise this will stick
             else:
                 if validation_data.get('cond_fact', False) is not False:
                     logger.warning("""Conditioning factor passed twice to fairpredictor both as part of
