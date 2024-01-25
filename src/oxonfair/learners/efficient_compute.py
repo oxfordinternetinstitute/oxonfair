@@ -400,14 +400,20 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric
     encoder.fit(true_groups.reshape(-1, 1))
     true_groups = encoder.transform(true_groups.reshape(-1, 1)).reshape(-1).astype(int)
     assigned_labels = np.arange(hard_assignment.max()+1)
-
-    if true_groups.max() > assigned_labels.size:
-        logger.warning('Fewer groups used in infered groups than in the true groups')
-    elif true_groups.max() + 1 < assigned_labels.size:
-        logger.warning('Substantially fewer groups used in true groups, than in the infered groups')
+    groups = true_groups.max() + 1
+    uniq=np.unique(hard_assignment)
+    if uniq.size<assigned_labels.size:
+        logger.warning('Some groups were not assigned, we only saw: %s',np.array2string(uniq) )
+                                                              
+    if groups > assigned_labels.size:
+        logger.warning("Fewer groups used(%d) in infered groups than in the true groups (%d)",
+                        groups,assigned_labels.size)
+    elif groups + 1 < assigned_labels.size:
+        logger.warning("Substantially fewer groups(%d) used in true groups than in the infered groups(%d)",
+                       groups,assigned_labels.size)
    
     ass_size = assigned_labels.shape[0]
-    groups = true_groups.max() + 1
+    
     # Preamble that reorganizes the data for efficient computation
     # This uses lists indexed by group rather than arrays
     # as there are different amounts of data per group

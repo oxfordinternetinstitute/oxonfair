@@ -19,7 +19,7 @@ train = total_data.sample(frac=0.5)
 val_test = total_data.drop(train.index)
 train_y = y.iloc[train.index]
 val_test_y =y.drop(train_y.index)
-val = val_test.sample(frac=0.5)
+val = val_test.sample(frac=0.4)
 test = val_test.drop(val.index)
 val_y=y.iloc[val.index]
 test_y=val_test_y.drop(val.index)
@@ -48,6 +48,21 @@ def test_base_functionality():
     fpredictor.evaluate_groups(verbose=True, return_original=True)
     fpredictor.evaluate_groups(return_original=True)
 
+    fpredictor.evaluate_groups(test_dict)
+
+def test_implicit_groups():
+    val2 = val_dict.copy()
+    val2['groups'] = val_dict['data']['sex_ Female']
+    test2 = test_dict.copy()
+    test2['groups'] = test_dict['data']['sex_ Female']
+    fpredictor = FairPredictor(predictor, val2)
+    fpredictor.evaluate_groups(verbose=True)
+    fpredictor.evaluate_groups(test2,verbose=True)
+    fpredictor.fit(gm.accuracy,gm.accuracy_parity,0.01)
+    fpredictor.plot_frontier()
+    fpredictor.evaluate_groups(verbose=True)
+    fpredictor.evaluate_groups(test2,verbose=True)
+    
 
 def test_no_groups(use_fast=True):
     "check pathway works with no groups"
@@ -58,6 +73,11 @@ def test_no_groups(use_fast=True):
     assert (fairp.predict_proba(val_dict) == predictor.predict_proba(val)).all().all()
     assert (fairp.predict(val_dict) == predictor.predict(val)).all().all()
     fairp.fit(gm.accuracy, gm.f1, 0)
+    fairp.plot_frontier()
+    fairp.evaluate(test_dict)
+    fairp.evaluate_fairness(test_dict)
+    fairp.evaluate_groups(test_dict)
+    fairp.plot_frontier(test_dict)
 
 
 def test_predict(use_fast=True):
@@ -73,6 +93,9 @@ def test_pathologoical2(use_fast=True):
     fpredictor.fit(gm.balanced_accuracy, gm.balanced_accuracy, 0)
     fpredictor.plot_frontier()
     fpredictor.evaluate_fairness()
+    fpredictor.plot_frontier(test_dict)
+    fpredictor.evaluate_fairness(test_dict)
+    
 
 
 def test_recall_diff(use_fast=True):

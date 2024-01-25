@@ -62,7 +62,7 @@ class FairPredictor:
 
     def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
                  add_noise=False,
-                 use_fast=True,conditioning_factor=None ,threshold=0.0) -> None:
+                 use_fast=True, conditioning_factor=None ,threshold=0.7) -> None:
         if predictor is None:
             def predictor(x):
                 return x
@@ -78,6 +78,7 @@ class FairPredictor:
         # i.e. groups = None
         # and there are no groups i.e. groups = False
         # However, as a user interface groups = None makes more sense for instantiation.
+
         self.threshold = threshold
         self.groups = groups
         self.use_fast: bool = use_fast
@@ -87,7 +88,7 @@ class FairPredictor:
             validation_labels=validation_data['target']
             if groups is False:
                 groups = validation_data.get('groups', False)
-                self.groups = groups
+                #Do not update self.groups otherwise this will stick
             else:
                 if validation_data.get('groups', False) is not False:
                     logger.warning("""Groups passed twice to fairpredictor both as part of
@@ -110,7 +111,7 @@ class FairPredictor:
         if self._internal_groups.shape[0] != validation_labels.shape[0]:
             logger.error('The size of the groups does not match the dataset size')
 
-        self.inferred_groups: bool = inferred_groups
+        self.inferred_groups = inferred_groups
         if inferred_groups:
             self._val_thresholds = call_or_get_proba(inferred_groups,self.validation_data)
         else:
@@ -163,7 +164,9 @@ class FairPredictor:
             return np.asarray(data[groups])
         if  isinstance(groups,int):
             return np.asarray(data[:,groups])
-        return groups
+        if groups is None:
+            return None 
+        return np.asarray(groups)
     
     def groups_to_numpy(self, groups, data):
         """helper function for transforming groups into a numpy array of unique values
@@ -375,7 +378,7 @@ class FairPredictor:
             val_thresholds = self._val_thresholds
         else:
             if isinstance(data,dict):
-                labels = data['target']
+                labels = np.asarray(data['target'])
                 proba = call_or_get_proba(self.predictor,data['data'])
 
             else:
@@ -389,7 +392,7 @@ class FairPredictor:
 
             if self.inferred_groups is False:
                 if self.groups is False:
-                    val_thresholds = np.ones((data.shape[0], 1))
+                    val_thresholds = np.ones((groups.shape[0], 1))
                 else:
                     val_thresholds = self.group_encoder.transform(groups.reshape(-1, 1)).toarray()
             else:
@@ -398,11 +401,11 @@ class FairPredictor:
                 else:
                     val_thresholds = call_or_get_proba(self.inferred_groups,data)
         if self.use_fast is False:
-            factor = self.cond_fact_to_numpy(self.conditioning_factor,self.validation_data)
+            factor = self.cond_fact_to_numpy(self.conditioning_factor,data)
             if _needs_groups(objective1):
-                objective1 = fix_groups_and_conditioning(objective1, self._internal_groups,factor)
+                objective1 = fix_groups_and_conditioning(objective1, self.groups_to_numpy(groups,data),factor)
             if _needs_groups(objective2):
-                objective2 = fix_groups_and_conditioning(objective2, self._internal_groups,factor)
+                objective2 = fix_groups_and_conditioning(objective2, self.groups_to_numpy(groups,data),factor)
 
             front1 = fair_frontier.compute_metric(objective1, labels, proba,
                                                   val_thresholds, self.frontier[1])
@@ -675,26 +678,31 @@ class FairPredictor:
         a  pandas array of scores. Note, these scores are not probabilities, and not guarenteed to
         be non-negative or to sum to 1.
         """
+        if self.groups is False and isinstance(data,dict):
+                groups = data.get('groups',False)
+        else:
+            groups = self.groups
         if isinstance(data, dict):
             data=data['data']
+        
         if is_not_autogluon(self.predictor):
             proba = call_or_get_proba(self.predictor, data)
-        else:    
+        else:
             proba: pd.DataFrame = self.predictor.predict_proba(data,
                                                            transform_features=transform_features)
         if self.add_noise:
             proba += np.random.normal(0,self.add_noise,proba.shape)
 
         if self.inferred_groups is False:
-            if self.groups is False:
+            if groups is False:
                 onehot = np.ones((data.shape[0], 1))
             else:
-                groups = self.groups_to_numpy(self.groups, data)
+                groups = self.groups_to_numpy(groups, data)
                 onehot = self.group_encoder.transform(groups.reshape(-1, 1)).toarray()
         else:
             if isinstance(data,dict):
                 onehot = call_or_get_proba(self.inferred_groups, data['data'])
-            else:    
+            else:   
                 onehot = call_or_get_proba(self.inferred_groups, data)
         if self.use_fast:
             tmp = np.zeros_like(proba)
@@ -839,9 +847,10 @@ def fix_groups_and_conditioning(metric: BaseGroupMetric, groups, conditioning_fa
         return fix_groups(metric, groups)
 
     conditioning_factor = np.asarray(conditioning_factor)
+    groups = np.asarray(groups)
 
     def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
-        return metric(y_true, y_pred, groups,groups, conditioning_factor)
+        return metric(y_true, y_pred, groups, conditioning_factor)
     return new_metric
 
 
