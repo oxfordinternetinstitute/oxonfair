@@ -36,6 +36,12 @@ def test_no_groups(use_fast=True):
     assert (fairp.predict_proba(train_data) == predictor.predict_proba(train_data)).all().all()
     assert (fairp.predict(train_data) == predictor.predict(train_data)).all().all()
     fairp.fit(gm.accuracy, gm.f1, 0)
+    fairp.plot_frontier()
+    fairp.evaluate(test_data)
+    fairp.evaluate_fairness(test_data)
+    fairp.evaluate_groups(test_data)
+    fairp.plot_frontier(test_data)
+
 
 
 def test_predict(use_fast=True):
