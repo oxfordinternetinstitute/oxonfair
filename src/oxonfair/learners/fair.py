@@ -62,7 +62,7 @@ class FairPredictor:
 
     def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
                  add_noise=False,
-                 use_fast=True, conditioning_factor=None ,threshold=0.7) -> None:
+                 use_fast=True, conditioning_factor=None, threshold=0.7) -> None:
         if predictor is None:
             def predictor(x):
                 return x
