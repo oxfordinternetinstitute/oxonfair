@@ -26,9 +26,9 @@ class FairPredictor:
     predictor: a binary  predictor that will be evaluated and modified. This can be:
         1. An autogluon binary predictor.
         2. A sklearn classifier.
-        3. An arbitary function 
-        4. The value None. 
-        If None  is used, we assume that we are rescoring predictions already made elsewhere, and 
+        3. An arbitary function
+        4. The value None.
+        If None  is used, we assume that we are rescoring predictions already made elsewhere, and
         the validation data should be a copy of the classifier outputs.
 
     validation_data: This can be:
@@ -37,7 +37,7 @@ class FairPredictor:
             'data' containing a pandas dataframe or numpy array to be fed to the classifier.
             'target' the ground truth-labels used to evaluate classifier peformance.
             'groups' (optional)
-            'cond_factor'  
+            'cond_factor'
     groups (optional, default None): is an indicator of protected attributes, i.e.  the discrete
         groups used to measure fairness
     it may be:
@@ -57,15 +57,15 @@ class FairPredictor:
     If use_fast is False, autogluon scorers are also supported.
     conditioning_factor (optional, default None) Used to specify the factor conditional metrics are conditioned on.
     Takes the same form as groups.
-    Threshold (optional, default 0) used in use_fast pathway. Adds an extra catagory of uncertain group when infering attributes.
-    If a datapoint has no response from the inferred_groups classifier above the threshold 
+    Threshold (optional, default 2/3) used in use_fast pathway. Adds an extra catagory of uncertain group when infering attributes.
+    If a datapoint has no response from the inferred_groups classifier above the threshold
     then it is assigned to the uncertain group. Tuning this value may help improve fairness/performance trade-offs.
-    When set to 0 it is off.   
+    When set to 0 it is off.
     """
 
     def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
                  add_noise=False,
-                 use_fast=True, conditioning_factor=None, threshold=0.7) -> None:
+                 use_fast=True, conditioning_factor=None, threshold=2/3) -> None:
         if predictor is None:
             def predictor(x):
                 return x
@@ -168,9 +168,9 @@ class FairPredictor:
         if  isinstance(groups,int):
             return np.asarray(data[:,groups])
         if groups is None:
-            return None 
+            return None
         return np.asarray(groups)
-    
+
     def groups_to_numpy(self, groups, data):
         """helper function for transforming groups into a numpy array of unique values
         parameters
@@ -182,7 +182,7 @@ class FairPredictor:
         numpy array
         """
         return self._to_numpy(groups,data,'groups',self.groups)
-    
+
     def cond_fact_to_numpy(self, fact, data):
         """helper function for transforming fact into a numpy array of unique values
         parameters
@@ -198,8 +198,8 @@ class FairPredictor:
     def infered_to_hard(self,infered):
         "Map the output of infered groups into a hard assignment for use in the fast pathway"
         if self.inferred_groups is False or self.threshold == 0:
-            return infered.argmax(1)    
-        
+            return infered.argmax(1)
+
         drop = infered.max(1) < self.threshold
         out = infered.argmax(1)+1
         out[drop] = 0
@@ -232,15 +232,15 @@ class FairPredictor:
         grid_width: allows manual specification of the grid size. N.B. the overall computational
                     budget is O(grid_width**groups)
                  By default the grid_size is 30
-        threshold: A float between 0 and 1 or None. If threshold is not None, this overwrites 
-                    the threshold used for assignment to a "don't know class" in the hard assignment 
+        threshold: A float between 0 and 1 or None. If threshold is not None, this overwrites
+                    the threshold used for assignment to a "don't know class" in the hard assignment
                     of inferened groups.
         returns
         -------
         Nothing
         """
         if threshold is not None:
-            self.threshold = threshold 
+            self.threshold = threshold
         if greater_is_better_obj is None:
             greater_is_better_obj = objective.greater_is_better
         if greater_is_better_const is None:
@@ -355,11 +355,11 @@ class FairPredictor:
                                     constraint provided to fit is used in its place.
             show_updated: (optional, default True) Highlight the updated classifier with a
                 different marker
-            color: (optional, default None) Specify the color the frontier should be plotted in. 
+            color: (optional, default None) Specify the color the frontier should be plotted in.
             new_plot: (optional, default True) specifies if plt.figure() should be called at the
             start or if an existing plot should be overlayed
             prefix (optional string) an additional prefix string that will be added to the legend for
-            frontier and updated predictor. 
+            frontier and updated predictor.
         """
         _guard_predictor_data_match(data,self.predictor)
         if self.frontier is None:
@@ -445,11 +445,11 @@ class FairPredictor:
             if show_original:
                 plt.scatter(zero[1], zero[0],s=40, label='Original predictor',marker='*')
             if show_updated:
-                plt.scatter(front2_u, front1_u, s=40, label=prefix+'Updated predictor',marker='P')
+                plt.scatter(front2_u, front1_u, s=40, label=prefix+'Updated predictor',marker='s')
             plt.legend(loc='best')
         else:
             plt.scatter(front2, front1, c=color)
-            
+
     def evaluate(self, data=None, metrics=None, verbose=False) -> pd.DataFrame:
         """Compute standard metrics of the original predictor and the updated predictor
          found by fit and return them in a dataframe.
@@ -593,7 +593,7 @@ class FairPredictor:
                 new_pred_proba = self.predict_proba(data)
                 if return_original:
                     orig_pred_proba = call_or_get_proba(self.predictor, data['data'])
-            else:     
+            else:
                 y_true= np.asarray(data[self.predictor.label])
                 new_pred_proba = self.predict_proba(data)
                 if return_original:
@@ -601,7 +601,7 @@ class FairPredictor:
                 y_true = (y_true == self.predictor.positive_class) * 1
 
         if self.add_noise and return_original:
-                orig_pred_proba += np.random.normal(0,self.add_noise,orig_pred_proba.shape)
+            orig_pred_proba += np.random.normal(0,self.add_noise,orig_pred_proba.shape)
 
 
         groups = self.groups_to_numpy(groups, data)
@@ -647,8 +647,8 @@ class FairPredictor:
 
         names = metrics.keys()
         names = list(names)
-        
-        overall_scores = list(map(lambda n: dispatch_metric(metrics[n], y_true, proba, groups, 
+
+        overall_scores = list(map(lambda n: dispatch_metric(metrics[n], y_true, proba, groups,
                                                             fact), names))
         scores = list(map(lambda n: dispatch_metric_per_group(metrics[n], y_true, proba, groups,
                                                                fact),names))
@@ -682,12 +682,12 @@ class FairPredictor:
         be non-negative or to sum to 1.
         """
         if self.groups is False and isinstance(data,dict):
-                groups = data.get('groups',False)
+            groups = data.get('groups',False)
         else:
             groups = self.groups
         if isinstance(data, dict):
             data=data['data']
-        
+
         if is_not_autogluon(self.predictor):
             proba = call_or_get_proba(self.predictor, data)
         else:
@@ -705,7 +705,7 @@ class FairPredictor:
         else:
             if isinstance(data,dict):
                 onehot = call_or_get_proba(self.inferred_groups, data['data'])
-            else:   
+            else:
                 onehot = call_or_get_proba(self.inferred_groups, data)
         if self.use_fast:
             tmp = np.zeros_like(proba)
@@ -753,15 +753,15 @@ def call_or_get_proba(predictor,data):
     return np.asarray(predictor.predict_proba(data))
 
 def _guard_predictor_data_match(data,predictor):
-    if (data is not None 
+    if (data is not None
         and is_not_autogluon(predictor)
         and not(isinstance(data,dict) and
                 data.get('data',False) is not False and
                 data.get('target',False) is not False)):
-        logger.error("""When not using autogluon data must be a dict containing keys 
+        logger.error("""When not using autogluon data must be a dict containing keys
                         'data' and 'target'""")
         assert False
-  
+
 
 def inferred_attribute_builder(train, target, protected, *args, **kwargs):
     """Helper function that trains tabular predictors suitible for use when the protected attribute
@@ -824,7 +824,7 @@ def fix_conditioning(metric: BaseGroupMetric, conditioning_factor):
 
         todo: return scorable"""
     if metric.cond_weights is None:
-        Warning.warning("Fixing conditoning factor on a metric that doesn't use it.")
+        logger.warning("Fixing conditoning factor on a metric that doesn't use it.")
         return metric
     conditioning_factor = np.asarray(conditioning_factor)
 
@@ -900,11 +900,11 @@ def dispatch_metric_per_group(metric, y_true: np.ndarray, proba: np.ndarray,
     returns
     -------
     a numpy array containing the per group score provided by metrics """
-    
+
     if isinstance(metric, group_metrics.GroupMetric):
         if metric.cond_weights is None:
             return metric.per_group(y_true, proba.argmax(1), groups)[0]
-        
+
         return metric.per_group(y_true, proba.argmax(1), groups, factor)[0]
     unique = np.unique(groups)
     out = np.empty_like(unique, dtype=float)

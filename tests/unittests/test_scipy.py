@@ -1,6 +1,6 @@
 """Tests for FairPredictor"""
 import pandas as pd
-import sklearn.tree        
+import sklearn.tree
 import oxonfair as fair
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
@@ -62,7 +62,7 @@ def test_implicit_groups():
     fpredictor.plot_frontier()
     fpredictor.evaluate_groups(verbose=True)
     fpredictor.evaluate_groups(test2,verbose=True)
-    
+
 
 def test_no_groups(use_fast=True):
     "check pathway works with no groups"
@@ -95,7 +95,7 @@ def test_pathologoical2(use_fast=True):
     fpredictor.evaluate_fairness()
     fpredictor.plot_frontier(test_dict)
     fpredictor.evaluate_fairness(test_dict)
-    
+
 
 
 def test_recall_diff(use_fast=True):
