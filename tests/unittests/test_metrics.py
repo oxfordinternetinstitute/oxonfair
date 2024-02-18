@@ -1,11 +1,11 @@
 import numpy as np
-from autogluon.core import metrics
 from oxonfair.utils import group_metrics as gm
 from oxonfair.utils import performance as perf
 
 
 def test_metrics():
     "check that core.metrics give the same answer as group metrics"
+    from autogluon.core import metrics
     array1 = np.random.randint(0, 2, 100)
     array2 = np.random.randint(0, 2, 100)
     array3 = np.zeros(100)

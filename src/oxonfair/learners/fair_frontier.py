@@ -2,8 +2,12 @@
 while efficient_compute is only compatable with group metrics"""
 from typing import Callable, Tuple
 import numpy as np
-from autogluon.core.metrics import Scorer
 
+AUTOGLUON_EXISTS = True
+try:
+    from autogluon.core.metrics import Scorer
+except ModuleNotFoundError:
+    AUTOGLUON_EXISTS = False
 
 def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
                    threshold_assignment: np.ndarray,
@@ -14,7 +18,7 @@ def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
     y_true = np.asarray(y_true)
     threshold_assignment = np.asarray(threshold_assignment)
 
-    pass_scores = isinstance(metric, Scorer) and (metric.needs_pred is False)
+    pass_scores = AUTOGLUON_EXISTS and isinstance(metric, Scorer) and (metric.needs_pred is False)
     # Consider preallocation because this next loop is the system bottleneck
     for i in range(weights.shape[-1]):
         tmp = threshold_assignment.dot(weights[:, :, i])

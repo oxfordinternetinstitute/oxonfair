@@ -72,7 +72,7 @@ class FairPredictor:
         if predictor is None:
             def predictor(x):
                 return x
-        if not (is_not_autogluon(predictor)) and predictor.problem_type != 'binary':
+        if not is_not_autogluon(predictor) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
 
         # Check if sklearn
@@ -707,7 +707,7 @@ def _needs_groups(func) -> bool:
     func either a Scorable or GroupMetric
     """
     if not AUTOGLUON_EXISTS:
-        return False
+        return True
     return not isinstance(func, Scorer)
 
 
@@ -715,7 +715,7 @@ def is_not_autogluon(predictor) -> bool:
     """Internal helper function. Checks if a predictor is not an autogluon fuction."""
     if AUTOGLUON_EXISTS:
         return not isinstance(predictor, TabularPredictor)
-    return False
+    return True
 
 
 def call_or_get_proba(predictor, data):

@@ -6,6 +6,12 @@ import oxonfair as fair
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
 
+PLT_EXISTS = True
+try:
+    import matplotlib.pyplot as plt
+except ModuleNotFoundError:
+    PLT_EXISTS = False
+
 classifier_type = sklearn.tree.DecisionTreeClassifier
 
 train_data = pd.read_csv("https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv")
@@ -56,6 +62,7 @@ def test_base_functionality():
 
 
 def test_implicit_groups():
+    "try without using any value for groups"
     val2 = val_dict.copy()
     val2["groups"] = val_dict["data"]["sex_ Female"]
     test2 = test_dict.copy()
@@ -64,7 +71,8 @@ def test_implicit_groups():
     fpredictor.evaluate_groups(verbose=True)
     fpredictor.evaluate_groups(test2, verbose=True)
     fpredictor.fit(gm.accuracy, gm.accuracy_parity, 0.01)
-    fpredictor.plot_frontier()
+    if PLT_EXISTS:
+        fpredictor.plot_frontier()
     fpredictor.evaluate_groups(verbose=True)
     fpredictor.evaluate_groups(test2, verbose=True)
 
@@ -78,11 +86,13 @@ def test_no_groups(use_fast=True):
     assert (fairp.predict_proba(val_dict) == predictor.predict_proba(val)).all().all()
     assert (fairp.predict(val_dict) == predictor.predict(val)).all().all()
     fairp.fit(gm.accuracy, gm.f1, 0)
-    fairp.plot_frontier()
+    if PLT_EXISTS:
+        fairp.plot_frontier()
     fairp.evaluate(test_dict)
     fairp.evaluate_fairness(test_dict)
     fairp.evaluate_groups(test_dict)
-    fairp.plot_frontier(test_dict)
+    if PLT_EXISTS:
+        fairp.plot_frontier(test_dict)
 
 
 def test_predict(use_fast=True):
@@ -100,9 +110,11 @@ def test_pathologoical2(use_fast=True):
         predictor, val_dict, groups="sex_ Female", use_fast=use_fast
     )
     fpredictor.fit(gm.balanced_accuracy, gm.balanced_accuracy, 0)
-    fpredictor.plot_frontier()
+    if PLT_EXISTS:
+        fpredictor.plot_frontier()
     fpredictor.evaluate_fairness()
-    fpredictor.plot_frontier(test_dict)
+    if PLT_EXISTS:
+        fpredictor.plot_frontier(test_dict)
     fpredictor.evaluate_fairness(test_dict)
 
 

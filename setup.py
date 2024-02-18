@@ -99,7 +99,6 @@ def default_setup_args(*, version):
 
 
 version = "0.1.5"
-#version = update_version(version, use_file_if_exists=False, create_file=True)
 
 install_requires = [
     "numpy>=1.21.4,<2.0",
