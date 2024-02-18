@@ -16,7 +16,7 @@ def compute_metric(
     """takes probability scores, and offsets them according to weights[group_prediction].
         then selects the max and computes a fairness metric
 
-    parameters
+    Parameters
     ----------
     metric: a BaseGroupMetric
     y_true: a numpy array containing the target labels
@@ -25,7 +25,7 @@ def compute_metric(
     threshold assignment: a numpy array containing group predictions, when groups are infered
         this differs from groups
     weights: a numpy array containing the set of per group offsets
-    returns
+    Returns
     -------
     a numpy array of scores for each choice of weight
     """
@@ -108,6 +108,7 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
 
     return front[:, order], weights[:, order]
 
+
 def build_grid_inner(accum_count, mesh, groups):
     """Sample from accum_count using mesh"""
     acc = accum_count[0][mesh[0]]
@@ -116,8 +117,9 @@ def build_grid_inner(accum_count, mesh, groups):
     assert acc.shape[-2:] == (4, groups)
     acc = acc.reshape(-1, 4, groups)
     acc = acc.transpose(1, 0, 2)
- 
+
     return acc
+
 
 def build_grid(accum_count: np.ndarray, bottom, top, metric1: Callable,
                metric2: Callable, *, steps=25) -> Tuple[np.ndarray, List[np.ndarray], np.ndarray]:
@@ -141,7 +143,6 @@ def build_grid(accum_count: np.ndarray, bottom, top, metric1: Callable,
         2. the indicies corresponding to thresholds
         3. the step offset used.
     """
-    #assigned_groups = len(bottom)
     groups = accum_count[0].shape[-1]
     step = [(t - b) / steps for t, b in zip(top, bottom)]
 
@@ -150,7 +151,7 @@ def build_grid(accum_count: np.ndarray, bottom, top, metric1: Callable,
                     for b, t, s in zip(bottom, top, step)]
     mesh = np.meshgrid(*mesh_indices, sparse=True)
 
-    acc=build_grid_inner(accum_count, mesh, groups)
+    acc = build_grid_inner(accum_count, mesh, groups)
     met1 = metric1(acc)
     assert len(met1.shape) == 1
     met2 = metric2(acc)
@@ -158,8 +159,9 @@ def build_grid(accum_count: np.ndarray, bottom, top, metric1: Callable,
     score = np.stack((met1, met2), 0)
     return score, mesh_indices, np.maximum(1, np.asarray(step))
 
+
 def build_grid2(accum_count1: np.ndarray, accum_count2: np.ndarray, bottom, top, metric1: Callable,
-               metric2: Callable, *, steps=25) -> Tuple[np.ndarray, List[np.ndarray], np.ndarray]:
+                metric2: Callable, *, steps=25) -> Tuple[np.ndarray, List[np.ndarray], np.ndarray]:
     """Part of efficient grid search.
     This uses the fact that metrics can be computed efficiently as a function of TP,FP,FN and TN.
     By sorting the data per assigned group  we can efficiently compute these four values by looking
@@ -189,8 +191,8 @@ def build_grid2(accum_count1: np.ndarray, accum_count2: np.ndarray, bottom, top,
                     for b, t, s in zip(bottom, top, step)]
     mesh = np.meshgrid(*mesh_indices, sparse=True)
 
-    acc1=build_grid_inner(accum_count1, mesh, groups)
-    acc2=build_grid_inner(accum_count2, mesh, groups)
+    acc1 = build_grid_inner(accum_count1, mesh, groups)
+    acc2 = build_grid_inner(accum_count2, mesh, groups)
     met1 = metric1(acc1)
     assert len(met1.shape) == 1
     met2 = metric2(acc2)
@@ -227,8 +229,9 @@ def condense(thresholds: np.ndarray, labels: np.ndarray, lmax: int, groups: np.n
 
     return unique_thresh[::-1], out[::-1]
 
+
 def condense_weights(thresholds: np.ndarray, labels: np.ndarray, lmax: int, groups: np.ndarray,
-             gmax: int,*, weight1=1, weight2=1) -> Tuple[np.ndarray, np.ndarray]:
+                     gmax: int, *, weight1=1, weight2=1) -> Tuple[np.ndarray, np.ndarray]:
     """Take an array of float thresholds and non-negative integer labels, groups and
     return a sorted List of unique thresholds and the counts for each unique count of
     threshold, label, group
@@ -251,13 +254,12 @@ def condense_weights(thresholds: np.ndarray, labels: np.ndarray, lmax: int, grou
     unique_thresh, index = np.unique(thresholds, return_inverse=True)
     out1 = np.zeros((unique_thresh.shape[0], lmax, gmax))
     out2 = np.zeros_like(out1)
-    
+
     np.add.at(out1, (index, labels, groups), weight1)
     np.add.at(out2, (index, labels, groups), weight2)
-    
-    #assert out1.sum() == labels.shape[0]
-    #assert out2.sum() == labels.shape[0]
+
     return unique_thresh[::-1], out1[::-1], out2[::-1]
+
 
 def test_cum_sum(accum_count, groups):
     "Check expected properties of accum_count hold"
@@ -282,10 +284,10 @@ def cumsum_zero(array: np.ndarray):
 
 def grid_search_no_weights(ordered_encode, ass_size, score,
                            metric1, metric2, steps, directions):
-    """Internal helper for grid search. 
-    The weighted pathway requires x2 memory and computation so instead of compressing the cases 
+    """Internal helper for grid search.
+    The weighted pathway requires x2 memory and computation so instead of compressing the cases
     and computing unweighted as weighted with weights 1, we preserve the old pathway."""
-   
+
     accum_count = [np.concatenate((cumsum_zero(o), cumsum_zero(o[::-1])[::-1]), 1)
                    for o in ordered_encode]
     # The above is the important code
@@ -314,25 +316,26 @@ def grid_search_no_weights(ordered_encode, ass_size, score,
     indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(ass_size, -1)
     return score, indicies, front, index
 
+
 def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
                         metric1, metric2, steps, directions):
-    """Internal helper for grid search. 
-    The weighted pathway requires x2 memory and computation so instead of compressing the cases 
+    """Internal helper for grid search.
+    The weighted pathway requires x2 memory and computation so instead of compressing the cases
     and computing unweighted as weighted with weights 1, we preserve the old pathway.
     This is the new pathway for weights"""
 
     accum_count1 = [np.concatenate((cumsum_zero(o), cumsum_zero(o[::-1])[::-1]), 1)
-                   for o in ordered_encode]
+                    for o in ordered_encode]
 
     accum_count2 = [np.concatenate((cumsum_zero(o), cumsum_zero(o[::-1])[::-1]), 1)
-                   for o in ordered_encode2]
+                    for o in ordered_encode2]
     # The above is the important code
     # accum_count is a list of size groups where each element is an array consisting of the number
     # of true positives, false positives, false negatives and false positives if a threshold is set
     # at a particular value. It is of size (4, groups) because the group assignment may come at test
     # time from an inaccurate classifier
 
-    #test_cum_sum(accum_count, groups)
+    # test_cum_sum(accum_count, groups)
     # now for the computational bottleneck
     bottom = np.zeros(groups)
     top = np.asarray([s.shape[0] for s in ordered_encode])
@@ -357,7 +360,7 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
 
 def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric2: Callable,
                 hard_assignment: np.ndarray, true_groups: np.ndarray, *, directions=(+1, +1),
-                group_response=False, steps=25,factor=None) -> Tuple[np.ndarray, np.ndarray]:
+                group_response=False, steps=25, factor=None) -> Tuple[np.ndarray, np.ndarray]:
     """Efficient grid search.
     Functions under the assumtion data is hard assigned by a group classifer with errors
     and the alignment need not perfectly correspond to groups
@@ -401,44 +404,48 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric
     true_groups = encoder.transform(true_groups.reshape(-1, 1)).reshape(-1).astype(int)
     assigned_labels = np.arange(hard_assignment.max()+1)
     groups = true_groups.max() + 1
-    uniq=np.unique(hard_assignment)
-    if uniq.size<assigned_labels.size:
-        logger.warning('Some groups were not assigned, we only saw: %s',np.array2string(uniq) )
-                                                              
+    uniq = np.unique(hard_assignment)
+    if uniq.size < assigned_labels.size:
+        logger.warning('Some groups were not assigned, we only saw: %s', np.array2string(uniq))
+
     if groups > assigned_labels.size:
-        logger.warning("Fewer groups used(%d) in infered groups than in the true groups (%d)",
-                        groups,assigned_labels.size)
+        logger.warning("Fewer groups used (%d) in infered groups than in the true groups (%d)",
+                       assigned_labels.size, groups)
     elif groups + 1 < assigned_labels.size:
-        logger.warning("Substantially fewer groups(%d) used in true groups than in the infered groups(%d)",
-                       groups,assigned_labels.size)
-   
+        logger.warning("Substantially fewer groups (%d) used in true groups than in the infered groups (%d)",
+                       groups, assigned_labels.size)
+
     ass_size = assigned_labels.shape[0]
-    
+
     # Preamble that reorganizes the data for efficient computation
     # This uses lists indexed by group rather than arrays
     # as there are different amounts of data per group
 
     masks = [hard_assignment == g for g in assigned_labels]
+    # We need to use assigned_labels rather than uniq for consistency with the offsets
+    # used in fair.py.
+
     if unweighted_path:
         collate = [condense(score[m], y_true[m], 2, true_groups[m], groups) for m in masks]
     else:
         assert factor is not None, 'Called fit with conditional metrics but no conditional factor provided'
-        #Consider disabling this and just use weight=1 if no factor provided
+        # Consider disabling this and just use weight=1 if no factor provided
         weight1 = 1
         weight2 = 1
         if metric1.cond_weights is not None:
-            weight1=metric1.cond_weights(factor, true_groups, y_true)
+            weight1 = metric1.cond_weights(factor, true_groups, y_true)
         if metric2.cond_weights is not None:
-            weight2=metric2.cond_weights(factor, true_groups, y_true)
-        def mask_weight(weight,mask):
-            if isinstance(weight,np.ndarray):
+            weight2 = metric2.cond_weights(factor, true_groups, y_true)
+
+        def mask_weight(weight, mask):
+            if isinstance(weight, np.ndarray):
                 return weight[mask]
             else:
                 return weight
 
-        collate = [condense_weights(score[m], y_true[m], 2, true_groups[m],
-                                    groups, weight1=mask_weight(weight1,m), 
-                                            weight2=mask_weight(weight2,m)) for m in masks]
+        collate = [condense_weights(score[m], y_true[m], 2, true_groups[m], groups,
+                                    weight1=mask_weight(weight1, m),
+                                    weight2=mask_weight(weight2, m)) for m in masks]
     thresholds = [c[0] for c in collate]
     ordered_encode = [c[1] for c in collate]
     if unweighted_path:
@@ -451,24 +458,24 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metric1: Callable, metric
 
     if unweighted_path:
         score, indicies, front, index = grid_search_no_weights(ordered_encode, ass_size, score,
-                           metric1, metric2, steps, directions)
+                                                               metric1, metric2, steps, directions)
     else:
         score, indicies, front, index = grid_search_weights(ordered_encode, ordered_encode2,
                                                             ass_size, score, metric1, metric2,
                                                             steps, directions)
-
 
     new_front, new_index = keep_front(score, indicies, directions)
     # merge the two existing fronts
     front, index = keep_front(np.concatenate((front, new_front), 1),
                               np.concatenate((index, new_index), 1),
                               directions)
-    def av_thresh(thresh,index):
+
+    def av_thresh(thresh, index):
         if thresh.size == 0:
             return np.zeros(index.shape)
         iplus1 = np.minimum(thresh.shape[0] - 1, index + 1)
         return (thresh[index] + thresh[iplus1]) / 2
-    
-    selected_thresholds = np.asarray([av_thresh(g,i)
+
+    selected_thresholds = np.asarray([av_thresh(g, i)
                                       for g, i in zip(thresholds, index)])
     return front, selected_thresholds
