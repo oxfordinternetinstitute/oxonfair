@@ -855,7 +855,7 @@ def dispatch_metric(metric: BaseGroupMetric, y_true, proba, groups, factor) -> n
                 return metric(y_true, proba.argmax(1), groups)[0]
             return metric(y_true, proba.argmax(1), groups, factor)[0]
 
-        if ((isinstance(metric, Scorer) and (metric.needs_pred is False)) or
+        if (AUTOGLUON_EXISTS and (isinstance(metric, Scorer) and (metric.needs_pred is False)) or
            isinstance(metric, group_metrics.ScorerRequiresContPred)):
             return metric(y_true, proba[:, 1] - proba[:, 0])
 

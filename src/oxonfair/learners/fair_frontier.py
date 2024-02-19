@@ -24,7 +24,7 @@ def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
         tmp = threshold_assignment.dot(weights[:, :, i])
         if pass_scores is False:
             pred = (proba + tmp).argmax(-1)
-            score[i] = metric(y_true, pred)
+            score[i] = metric(y_true, pred)[0]
         else:
             add = proba + tmp
             diff = add[:, 1] - add[:, 0]
