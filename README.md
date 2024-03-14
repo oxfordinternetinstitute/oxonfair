@@ -1,10 +1,10 @@
-# OxonFair: An algorithmic Fairness Toolkit
+# OxonFair: An Algorithmic Fairness Toolkit for High-Capacity Models
 This is a toolkit designed to enforce a wide-range of fairness definitions and to customize binary classifier behavior.
-The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data. 
+The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 
 For low capacity models (e.g. linear regression, and decision-trees of limited depth), we recomend [fairlearn](https://github.com/fairlearn/fairlearn).
 
-We support a range of complex classifiers including ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html), [scikit learn](https://scikit-learn.org/stable/) (experimental). 
+We support a range of complex classifiers including ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html), [scikit learn](https://scikit-learn.org/stable/) (experimental).
 
 It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
@@ -12,12 +12,12 @@ It is a modified version of [autogluon.fair](https://github.com/autogluon/autogl
 
 To install from source.
  1.  (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
- 2.  (experimental alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>)
+ 2.  (Minimal Alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>)
  3. Download the source of oxonfair and in the source directory run:
-    python3 -m pip install -e .
+    pip install -e .
 
 Now run the [Example Notebook](examples/quickstart_fair.ipynb) or try some of the example below.
-
+For scikit learn see [sklearn.md](./sklearn.md)
 ### Example usage
 
     # Load and train a baseline classifier
@@ -28,15 +28,15 @@ Now run the [Example Notebook](examples/quickstart_fair.ipynb) or try some of th
     train_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv')
     test_data = TabularDataset('https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv')
     predictor = TabularPredictor(label='class').fit(train_data=train_data)
-    
+
     # Modify predictor to enforce fairness over the train_data with respect to groups given by the column 'sex'
     fpredictor = FairPredictor(predictor,train_data,'sex')
     # Maximize accuracy while enforcing that the demographic parity (the difference in positive decision rates between men and women is at most 0.02)
     fpredictor.fit(gm.accuracy,gm.demographic_parity,0.02)
-    
+
     # Evaluate on test data
     fpredictor.predict(test_data)
-    
+
     # Evaluate a range of performance measures, and compare against original classifier on test data
     fpredictor.evaluate(test_data, verbose= True)
 
@@ -84,7 +84,7 @@ Now run the [Example Notebook](examples/quickstart_fair.ipynb) or try some of th
 
 ## Overview
 
-Oxonfair is a postprocessing approach for enforcing fairness, with support for a wide range of performance metrics and fairness criteria, and support for inferred attributes, i.e. it does not require access to protected attributes at test time. 
+Oxonfair is a postprocessing approach for enforcing fairness, with support for a wide range of performance metrics and fairness criteria, and support for inferred attributes, i.e. it does not require access to protected attributes at test time.
 Under the hood, FairPredictor works by adjusting the decision boundary for each group individually. Where groups are not available, it makes use of inferred group membership to adjust decision boundaries.
 
 The key idea underlying this toolkit is that for a wide range of use cases, the most suitable classifier should do more than maximize some form of accuracy.
@@ -125,7 +125,7 @@ Unlike other approaches to fairness, FairPredictor allows the optimization of ar
 
 Rather than offering a range of different fairness methods that enforce a small number of fairness definitions through a variety of different methods, we offer one method that can enforce a much wider range of fairness definitions out of the box, alongside support for custom fairness definitions.
 
-Of the set of metrics discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify](https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-measure-post-training-bias.html), out of the box FairPredictor offers the ability to both measure and enforce 7 of the 8 metrics used to evaluate classifier decision measured in Verma and Rubin, and 11 of the 13 measures used in Clarify.
+Of the set of metrics discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify](https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-measure-post-training-bias.html), out of the box FairPredictor offers the ability to both measure and enforce all of the 8 metrics used to evaluate classifier decision measured in Verma and Rubin, and 12 of the 13 measures used in Clarify.
 
 ##### Direct Remedy of Harms
 
@@ -133,9 +133,9 @@ See this [paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4331652) fo
 
 An Ipython notebook generating many of the figures in the paper can be found here: [Levelling up notebook](examples/levelling_up.ipynb)
 
-Many fairness measures can be understood as identifying a harm, and then equalizing this harm across the population as a whole. For example, the use demographic parity of identifies people as being harmed by a low selection rate, which is then set to be the same for all groups, while equal opportunity identifies people as being harmed by low recall, and balances this harm across all groups. However, these fairness formulations often explicitly  
+Many fairness measures can be understood as identifying a harm, and then equalizing this harm across the population as a whole. For example, the use demographic parity of identifies people as being harmed by a low selection rate, which is then set to be the same for all groups, while equal opportunity identifies people as being harmed by low recall, and balances this harm across all groups. However, these fairness formulations often explicitly
 
-As an alternative to equalizing the harm across the population, we allow data scientists to specify minimum rates of e.g., recall, precision, or selection rate for every group, with one line of code. E.g. 
+As an alternative to equalizing the harm across the population, we allow data scientists to specify minimum rates of e.g., recall, precision, or selection rate for every group, with one line of code. E.g.
 
     fpredictor.fit(gm.accuracy, gm.precision.min, 0.5)
 
@@ -164,7 +164,7 @@ optimizes the utility, while
     fpredictor.fit(my_utility, gm.accuracy, 0.5)
 
 optimizes the utility subject to the requirement that the classifier accuracy can not drop below 0.5.
-  
+
 ##### Support for user-specified performance and fairness measures
 
 As well as providing support for enforcing a wide range of performance and fairness measures, we allow users to define their own metrics and fairness measures.
@@ -222,7 +222,7 @@ By default, this method reports the standard fairness metrics of SageMaker Clari
 By default, this method reports, per group, the standard binary evaluation criteria of autogluon for both the updated predictor only, over the data used by fit. The behavior can be altered by providing either alternate data or a new dictionary of methods. Where groups is not provided, it will use the same groups as passed to `fit`, but this can be altered. If you wish to also see the per group performance of the original classifier, use `return_original=True` to receive a dict containing the per_group performance of the original and updated classifier. If verbose is set to true, the table contains the long names of methods, otherwise it reports the dictionary keys.
 
 ### Fairness using Inferred Attributes
-  
+
 In many cases, the attribute you wish to be fair with respect to such as `sex` may not be available at test time. In this case you can make use of inferred attributes predicted by another classifier. This can be done by defining the fair predictor in the following way.
 
     fpredictor = fair.FairPredictor(predictor,  data, 'sex', inferred_groups=attribute_pred)
@@ -240,7 +240,7 @@ This allows for the easy training of two tabular classifiers, one called `predic
 
 ### Fairness on COMPAS using Inferred Attributes
 
-We demonstrate how to enforce a wide range of fairness definitions on the COMPAS dataset. This dataset records paroles caught violating the terms of parole. As it measures who was caught, it is strongly influenced by policing and environmental biases, and should not be confused with a measurement of who actually violated their terms of parole. See [this paper](https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/file/92cc227532d17e56e07902b254dfad10-Paper-round1.pdf) for a discussion of its limitations and caveats. 
+We demonstrate how to enforce a wide range of fairness definitions on the COMPAS dataset. This dataset records paroles caught violating the terms of parole. As it measures who was caught, it is strongly influenced by policing and environmental biases, and should not be confused with a measurement of who actually violated their terms of parole. See [this paper](https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/file/92cc227532d17e56e07902b254dfad10-Paper-round1.pdf) for a discussion of its limitations and caveats.
 We use it because it is a standard fairness dataset that captures such strong differences in outcome between people identified as African-American and everyone else, that classifiers trained on this dataset violate most definitions of fairness.
 
 As many of the ethnic groups are too small for reliable statistical estimation, we only consider differences is in outcomes between African-Americans vs. everyone else (labeled as other).
@@ -259,7 +259,7 @@ We load and preprocess the COMPAS dataset, splitting it into three roughly equal
     test=val_and_test.drop(val.index)
 
 To enforce fairness constraints without access to protected attributes at test time, we train two classifiers to infer the 2-year recidivism rate, and ethnicity.
-  
+
     predictor2, protected = inferred_attribute_builder(train, 'two_year_recid', 'race')
 
 From these a single predictor that maximizes accuracy while reducing the demographic parity violation to less than 2.5% can be trained by running:
@@ -287,9 +287,9 @@ We can now contrast the behavior of a fair classifier that relies on access to t
 
     # we first create a classifier using the protected attribute
     predictor=TabularPredictor(label='two_year_recid').fit(train_data=train)
-    
+
     fpredictor = FairPredictor(predictor, val, 'race', )
-    
+
     evaluate(fpredictor, gm.clarify_metrics)
 
 This returns the following table, which shows little drop in accuracy compared to the original and in some cases, even an improvement. N.B. Class Imbalance is a property of the dataset and cannot be updated.
@@ -312,9 +312,9 @@ This returns the following table, which shows little drop in accuracy compared t
 In contrast, even though the base classifiers have similar accuracy, when using inferred attributes (N.B. the base classifier is not directly trained to maximize accuracy, which is why it can have higher accuracy when it doesn't use race), we see a much greater drop in accuracy as fairness is enforced which is consistent with [Lipton et al.](https://arxiv.org/pdf/1711.07076.pdf)
 
     # Now using the inferred attributes
-    
+
     fpredictor2 = FairPredictor(predictor2, val, 'race', inferred_groups=protected)
-    
+
     evaluate(fpredictor2,gm.clarify_metrics)
 
 |                                                         |   Measure (original) |   Measure (updated) |   Accuracy (original) |   Accuracy (updated) |
@@ -332,7 +332,7 @@ In contrast, even though the base classifiers have similar accuracy, when using 
 | Treatment Equality                                      |            0.32195   |          0.0277123  |              0.672871 |             0.590099 |
 | Generalized Entropy                                     |            0.196436  |          0.0508368  |              0.672871 |             0.442376 |
 
-Similar results can be obtained using the metrics of Verma and Rubin, by running 
+Similar results can be obtained using the metrics of Verma and Rubin, by running
 
     evaluate(fpredictor, gm.verma_metrics)
 
@@ -348,7 +348,7 @@ Similar results can be obtained using the metrics of Verma and Rubin, by running
 | Maximal Group Difference in Accuracy            |            0.0469919 |           0.0532531 |              0.666139 |             0.663762 |
 | Treatment Equality                              |            0.933566  |           0.159398  |              0.666139 |             0.66099  |
 
-and 
+and
 
     evaluate(fpredictor2, gm.verma_metrics)
 |                                                 |   Measure (original) |   Measure (updated) |   Accuracy (original) |   Accuracy (updated) |
@@ -501,5 +501,3 @@ These relaxations take value 0 only if the equalities are satisfied for all pair
 | `gm.predictive_equality` | Maximum difference in False Negative Rate                                                             |
 | `gm.accuracy._parity`    | Maximum difference in Accuracy                                                                        |
 | `gm.treatment_equality`  | Maximum difference between groups in Error Ratio                                                      |
-
-
