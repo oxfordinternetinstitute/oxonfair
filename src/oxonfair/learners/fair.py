@@ -869,3 +869,12 @@ def single_offset(x):
     by altering a single threshold for all groups.
     To use call FairPredictor with the argument infered_groups=single_offset"""
     return np.zeros((x.shape[0], 1))
+
+def build_data_dict(target, data, groups = None, conditioning_factor = None):
+    "Helper function that builds dictionaries for use with sklearn classifiers"
+    out = {'target':target, 'data':data}
+    if groups is not None:
+        out['groups'] = groups
+    if conditioning_factor is not None:
+        out['factor'] = conditioning_factor
+    return out
