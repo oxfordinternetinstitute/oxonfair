@@ -130,7 +130,7 @@ def test_recall_diff(use_fast=True):
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025)
 
     # Evaluate the change in fairness (recall difference corresponds to EO)
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
 
     assert measures["original"]["recall.diff"] > 0.025
 
@@ -138,7 +138,7 @@ def test_recall_diff(use_fast=True):
     measures = fpredictor.evaluate(verbose=False)
     acc = measures["updated"]["accuracy"]
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025, greater_is_better_const=True)
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
     assert measures["original"]["recall.diff"] > 0.025
 
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025, greater_is_better_obj=False)
@@ -153,7 +153,7 @@ def test_disp_impact(use_fast=True):
     )
     fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.9)
 
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
 
     assert measures["original"]["disparate_impact"] < 0.9
 
@@ -167,7 +167,7 @@ def test_min_recall(use_fast=True):
     )
     # Enforce that every group has a recall over 0.5
     fpredictor.fit(gm.accuracy, gm.recall.min, 0.5)
-    scores = fpredictor.evaluate_groups()
+    scores = fpredictor.evaluate_groups(return_original=False,verbose=False)
     assert all(scores["recall"][:-1] > 0.5)
 
 

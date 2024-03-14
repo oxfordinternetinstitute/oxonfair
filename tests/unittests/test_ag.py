@@ -91,7 +91,7 @@ def test_recall_diff(use_fast=True):
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025)
 
     # Evaluate the change in fairness (recall difference corresponds to EO)
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
 
     assert measures["original"]["recall.diff"] > 0.025
 
@@ -99,7 +99,7 @@ def test_recall_diff(use_fast=True):
     measures = fpredictor.evaluate()
     acc = measures["updated"]["Accuracy"]
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025, greater_is_better_const=True)
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
     assert measures["original"]["recall.diff"] > 0.025
 
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.01, greater_is_better_obj=False)
@@ -110,9 +110,9 @@ def test_subset(use_fast=True):
     "set up new fair class using 'race' as the protected group and evaluate on test data"
     fpredictor = fair.FairPredictor(predictor, test_data, "race", use_fast=use_fast)
 
-    full_group_metrics = fpredictor.evaluate_groups()
+    full_group_metrics = fpredictor.evaluate_groups(return_original=False, verbose=False)
     fpredictor = fair.FairPredictor(predictor, new_test, "race", use_fast=use_fast)
-    partial_group_metrics = fpredictor.evaluate_groups()
+    partial_group_metrics = fpredictor.evaluate_groups(return_original=False, verbose=False)
 
     # Check that metrics computed over a subset of the data is consistent with metrics over all data
     for group in (" White", " Black", " Amer-Indian-Eskimo"):
@@ -129,7 +129,7 @@ def test_disp_impact(use_fast=True):
     fpredictor = fair.FairPredictor(predictor, new_test, "race", use_fast=use_fast)
     fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.8)
 
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
 
     assert measures["original"]["disparate_impact"] < 0.8
 
@@ -141,7 +141,7 @@ def test_min_recall(use_fast=True):
     fpredictor = fair.FairPredictor(predictor, new_test, "race", use_fast=use_fast)
     # Enforce that every group has a recall over 0.5
     fpredictor.fit(gm.accuracy, gm.recall.min, 0.5)
-    scores = fpredictor.evaluate_groups()
+    scores = fpredictor.evaluate_groups(return_original=False, verbose=False)
     assert all(scores["recall"][:-1] > 0.5)
 
 
@@ -188,7 +188,7 @@ def test_recall_diff_inferred(use_fast=True):
 
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025)
 
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
 
     assert measures["original"]["recall.diff"] > 0.025
 

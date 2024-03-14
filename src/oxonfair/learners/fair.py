@@ -494,7 +494,7 @@ class FairPredictor:
         return self.evaluate_fairness(data, groups, metrics=metrics, verbose=verbose)
 
     def evaluate_fairness(self, data=None, groups=None, factor=None, *,
-                          metrics=None, verbose=False) -> pd.DataFrame:
+                          metrics=None, verbose=True) -> pd.DataFrame:
         """Compute standard fairness metrics for the orginal predictor and the new predictor
          found by fit. If fit has not been called return a dataframe containing
          only the metrics of the original predictor.
@@ -549,7 +549,7 @@ class FairPredictor:
         return collect
 
     def fairness_metrics(self, y_true: np.ndarray, proba, groups: np.ndarray,
-                         metrics, factor, *, verbose=False) -> pd.DataFrame:
+                         metrics, factor, *, verbose=True) -> pd.DataFrame:
         """Helper function for evaluate_fairness
         Report fairness metrics that do not require additional information.
         parameters
@@ -575,7 +575,7 @@ class FairPredictor:
         return pd.DataFrame(values, index=names)
 
     def evaluate_groups(self, data=None, groups=None, metrics=None, fact=None, *,
-                        return_original=False, verbose=False):
+                        return_original=True, verbose=True):
         """Evaluate standard metrics per group and returns dataframe.
         parameters
         ----------
