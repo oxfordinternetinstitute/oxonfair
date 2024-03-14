@@ -100,7 +100,6 @@ Evaluate fairness using standard metrics with:
 | Treatment Equality                                      |  0.172428  | 0.28022   |
 | Generalized Entropy                                     |  0.102481  | 0.105529  |
 
-
 call `fpredict.predict( )`, and `fpredict.predict_proba( )` to score new data.
 
 Once the base predictor has been trained, and the object built, you can use the fair predictor in the same way as with autogluon. See [README.md](./README.md) for details.

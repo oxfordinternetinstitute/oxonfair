@@ -12,12 +12,12 @@ It is a modified version of [autogluon.fair](https://github.com/autogluon/autogl
 
 To install from source.
  1.  (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
- 2.  (experimental alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>)
+ 2.  (Minimal Alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>)
  3. Download the source of oxonfair and in the source directory run:
     pip install -e .
 
 Now run the [Example Notebook](examples/quickstart_fair.ipynb) or try some of the example below.
-
+For scikit learn see [sklearn.md](./sklearn.md)
 ### Example usage
 
     # Load and train a baseline classifier
