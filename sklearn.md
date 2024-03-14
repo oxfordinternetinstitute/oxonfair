@@ -6,7 +6,7 @@ While the basic approach is the same as for autogluon:
 
 1. Fit a predictor.
 2. Create a fairpredictor object using the predictor
-3. call fit
+3. call fit on the fairpredictor
 
 Step 1 requires considerably more preamble when using sklearn.
 
@@ -54,6 +54,9 @@ and prepare to enforce and evaluate fairness with respect to the variable `sex_ 
 
 ### Fit the object
 
+Here we call fit to maximise accuracy while ensuring that the difference in recall between the groups is less than 2%.
+A wide range of possible performance metrics and fairness measures are suported.
+
     fpred.fit(gm.accuracy,gm.recall.diff,0.02)
 
 ### We can now visualise the space of possible trade-offs
@@ -62,7 +65,7 @@ and prepare to enforce and evaluate fairness with respect to the variable `sex_ 
 
 ![frontier](./sklearn_frontier.png)
 
-### And evaluate on a wide range of harms both on the validation set where it was enforced, and on the test set
+### And evaluate on a range of harms both on the validation set where it was enforced, and on the test set
 
     fpred.evaluate_groups()
 
