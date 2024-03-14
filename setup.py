@@ -101,8 +101,8 @@ def default_setup_args(*, version):
 version = "0.1.5"
 
 install_requires = [
-    "numpy>=1.21.4,<2.0",
-    "pandas>=1.2.5,<2.0",
+    "numpy>=1.21.4",
+    "pandas>=1.2.5",
 ]
 
 extras_require = dict()
