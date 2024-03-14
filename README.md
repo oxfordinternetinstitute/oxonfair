@@ -4,7 +4,7 @@ The toolkit is designed to overcome a range of shortcomings in existing fairness
 
 For low capacity models (e.g. linear regression, and decision-trees of limited depth), we recomend [fairlearn](https://github.com/fairlearn/fairlearn).
 
-We support a range of complex classifiers including ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html), [scikit learn](https://scikit-learn.org/stable/) (experimental).
+We support a range of complex classifiers including ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html), and [scikit learn](https://scikit-learn.org/stable/).
 
 It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
