@@ -9,6 +9,7 @@ try:
 except ModuleNotFoundError:
     AUTOGLUON_EXISTS = False
 
+
 def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
                    threshold_assignment: np.ndarray,
                    weights: np.ndarray) -> np.ndarray:

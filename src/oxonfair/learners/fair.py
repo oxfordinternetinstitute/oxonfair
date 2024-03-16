@@ -1,4 +1,5 @@
-"""The entry point to fair. Defines the FairPredictor object used to access fairness functionality."""
+"""The entry point to fair. Defines the FairPredictor object used to access fairness
+functionality."""
 import logging
 import numpy as np
 import pandas as pd
@@ -19,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 
 class FairPredictor:
-    """Assess and mitigate the unfairness and effectiveness of a autogluon binary predictor post-fit
-    by computing group specific metrics, and performing threshold adjustment.
+    """Assess and mitigate the unfairness and effectiveness of a binary predictor
+    post-fit by computing group specific metrics, and performing threshold adjustment.
     Parameters
     ----------
     predictor: a binary  predictor that will be evaluated and modified. This can be:
@@ -78,12 +79,14 @@ class FairPredictor:
         # Check if sklearn
         _guard_predictor_data_match(validation_data, predictor)
         self.predictor = predictor
-        if groups is None:
+        if groups is None and not isinstance(validation_data, dict):
             groups = False
         # Internal logic differentiates between groups should be recovered from other data
         # i.e. groups = None
         # and there are no groups i.e. groups = False
         # However, as a user interface groups = None makes more sense for instantiation.
+        # This colides with the alternative use case where a dict is passed and groups
+        # are estimated.
 
         self.threshold = threshold
         self.groups = groups
@@ -91,13 +94,13 @@ class FairPredictor:
         self.conditioning_factor = conditioning_factor
         self.logit_scaling = logit_scaling
         if isinstance(validation_data, dict):
-            self.validation_data = validation_data['data']
+            self.validation_data = validation_data  # ['data']
             validation_labels = validation_data['target']
-            if groups is False:
+            if groups is None:
                 groups = validation_data.get('groups', False)
                 # Do not update self.groups otherwise this will stick
             else:
-                if validation_data.get('groups', False) is not False:
+                if validation_data.get('groups', None) is not None:
                     logger.warning("""Groups passed twice to fairpredictor both as part of
                                    the dataset and as an argument.
                                    The argument will be used.""")
@@ -489,7 +492,7 @@ class FairPredictor:
             else:
                 groups = np.ones(data.shape[0])
         else:
-            groups = np.ones(self.validation_data.shape[0])
+            groups = np.ones(self.y_true.shape[0])
 
         return self.evaluate_fairness(data, groups, metrics=metrics, verbose=verbose)
 
@@ -655,7 +658,9 @@ class FairPredictor:
         a  pandas array of scores. Note, these scores are not probabilities, and not guarenteed to
         be non-negative or to sum to 1.
         """
-        if self.groups is False and isinstance(data, dict):
+        if self.groups is None:
+            _guard_predictor_data_match(data, self.predictor)
+        if self.groups is None and isinstance(data, dict):
             groups = data.get('groups', False)
         else:
             groups = self.groups
@@ -722,6 +727,8 @@ def call_or_get_proba(predictor, data):
     """Internal helper function. Implicit dispatch depending on if predictor is callable
     or follows scikit-learn interface.
     Converts output to numpy array"""
+    if isinstance(data, dict):
+        data = data['data']
     if callable(predictor):
         return np.asarray(predictor(data))
     return np.asarray(predictor.predict_proba(data))
@@ -870,11 +877,19 @@ def single_offset(x):
     To use call FairPredictor with the argument infered_groups=single_offset"""
     return np.zeros((x.shape[0], 1))
 
-def build_data_dict(target, data, groups = None, conditioning_factor = None):
+
+def build_data_dict(target, data, groups=None, conditioning_factor=None):
     "Helper function that builds dictionaries for use with sklearn classifiers"
-    out = {'target':target, 'data':data}
+    assert target.shape[0] == data.shape[0]
+    assert data.ndim == 2
+    assert target.ndim == 1
+    out = {'target': target, 'data': data}
     if groups is not None:
+        assert target.shape[0] == groups.shape[0]
+        assert groups.ndim == 1
         out['groups'] = groups
     if conditioning_factor is not None:
-        out['factor'] = conditioning_factor
+        assert conditioning_factor.ndim == 1
+        assert target.shape[0] == conditioning_factor.shape[0]
+        out['cond_fact'] = conditioning_factor
     return out

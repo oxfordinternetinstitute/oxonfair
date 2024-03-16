@@ -1,16 +1,18 @@
 """Tests for FairPredictor"""
+try:
+    from autogluon.tabular import TabularDataset, TabularPredictor
+    from autogluon.core import metrics
+    train_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv")
+    test_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv")
+    predictor = TabularPredictor(label="class").fit(train_data=train_data, time_limit=3)
+    new_test = test_data[~test_data["race"].isin([" Other", " Asian-Pac-Islander"])]
 
-from autogluon.tabular import TabularDataset, TabularPredictor
-from autogluon.core import metrics
+except ModuleNotFoundError:
+    print('Autogluon not installed')
+    
 import oxonfair as fair
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
-
-train_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv")
-test_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv")
-predictor = TabularPredictor(label="class").fit(train_data=train_data, time_limit=3)
-new_test = test_data[~test_data["race"].isin([" Other", " Asian-Pac-Islander"])]
-# drop other
 
 
 def test_base_functionality():

@@ -37,29 +37,43 @@ predictor.fit(train, train_y)
 val_dict = {"data": val, "target": val_y}
 test_dict = {"data": test, "target": test_y}
 
+val_dict_g = fair.build_data_dict(val_y, val, val['sex_ Female'])
+test_dict_g = fair.build_data_dict(test_y, test, test['sex_ Female'])
 
-def test_base_functionality():
+
+def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
     "not calling fit should not alter predict or predict_proba"
-    fpredictor = FairPredictor(predictor, val_dict, "sex_ Female")
-    fpredictor.evaluate(val_dict)
-    fpredictor.evaluate_fairness(val_dict)
-    fpredictor.evaluate_groups(val_dict)
-    fpredictor.evaluate()
-    fpredictor.evaluate_fairness()
-    fpredictor.evaluate_groups()
-    assert (fpredictor.predict_proba(val_dict) == predictor.predict_proba(val_dict["data"])).all().all()
-    assert (fpredictor.predict(val_dict) == predictor.predict(val_dict["data"])).all().all()
+    if 'groups' in val_dict:
+        fpredictor = FairPredictor(predictor, val_dict)
+    else:    
+        fpredictor = FairPredictor(predictor, val_dict, "sex_ Female")
+    e1 = fpredictor.evaluate(val_dict)
+    e2 = fpredictor.evaluate()
+    assert (e1==e2).all().all()
+    f1 = fpredictor.evaluate_fairness()
+    f2 = fpredictor.evaluate_fairness(val_dict)
+    assert (f1==f2).all().all()
+    g1 = fpredictor.evaluate_groups(val_dict)
+    g2 = fpredictor.evaluate_groups()
+    assert (g1==g2).all().all()
+    proba = fpredictor.predict_proba(val_dict)
+    pred = fpredictor.predict(val_dict)
+    if 'groups' not in val_dict:
+        proba2 = predictor.predict_proba(val_dict["data"]) 
+        assert (proba == proba2).all().all()
+        assert (pred == predictor.predict(val_dict["data"])).all().all()
 
-    assert (fpredictor.predict_proba(val_dict) == fpredictor.predict_proba(val_dict["data"])).all().all()
-
-    fpredictor.evaluate(verbose=True)
-    fpredictor.evaluate_fairness(verbose=True)
-    fpredictor.evaluate_groups(verbose=True)
-    fpredictor.evaluate_groups(verbose=True, return_original=True)
-    fpredictor.evaluate_groups(return_original=True)
+    fpredictor.evaluate(verbose=False)
+    fpredictor.evaluate_fairness(verbose=False)
+    fpredictor.evaluate_groups(verbose=False)
+    fpredictor.evaluate_groups(verbose=False, return_original=False)
+    fpredictor.evaluate_groups(return_original=False)
 
     fpredictor.evaluate_groups(test_dict)
 
+def test_base_with_groups():
+    'Test base functionality holds when groups are provided'
+    test_base_functionality(val_dict_g, test_dict_g)
 
 def test_implicit_groups():
     "try without using any value for groups"
