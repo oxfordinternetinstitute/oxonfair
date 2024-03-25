@@ -5,7 +5,10 @@ from oxonfair.utils import performance as perf
 
 def test_metrics():
     "check that core.metrics give the same answer as group metrics"
-    from autogluon.core import metrics
+    try:
+        from autogluon.core import metrics
+    except ImportError:
+        return
     array1 = np.random.randint(0, 2, 100)
     array2 = np.random.randint(0, 2, 100)
     array3 = np.zeros(100)

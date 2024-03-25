@@ -52,10 +52,11 @@ class FairPredictor:
         This can be used to enforce fairness when no information about protected attribtutes is
         avalible at test time. If this is not false, fairness will be measured using the variable
         'groups', but enforced using the predictor response.
-    use_fast: (Optional) Bool
-    If use_fast is True, the fair search is much more efficient, but the objectives must take the
-    form of a GroupMetric
-    If use_fast is False, autogluon scorers are also supported.
+    use_fast: (Optional, default True) Bool or 'hybrid'
+        If use_fast is True, the fair search is much more efficient, but the objectives must take the
+        form of a GroupMetric. 'Hybrid' initialises the slow_pathway with the output of the fast pathhway
+        This is useful for infered groups in deep networks.
+        If use_fast is False, autogluon and scikitlearn scorers are also supported.
     conditioning_factor (optional, default None) Used to specify the factor conditional metrics
     are conditioned on.
     Takes the same form as groups.
@@ -141,7 +142,7 @@ class FairPredictor:
         else:
             self.y_true = np.asarray(validation_labels == self.predictor.class_labels[1])
         self.frontier = None
-        if self.use_fast:
+        if self.use_fast is True:
             self.offset = np.zeros((self._val_thresholds.shape[1],))
         else:
             self.offset = np.zeros((self._val_thresholds.shape[1], self.proba.shape[1]))
@@ -318,7 +319,7 @@ class FairPredictor:
             direction[1] = -1
 
         if grid_width is False:
-            if self.use_fast:
+            if self.use_fast is True:
                 grid_width = min(30, (30**5)**(1 / self._val_thresholds.shape[1]))
             else:
                 grid_width = 14
@@ -330,7 +331,30 @@ class FairPredictor:
         proba = self.proba
         if tol is not False:
             proba = np.around(self.proba / tol) * tol
-        if self.use_fast:
+        if self.use_fast == 'hybrid':
+            frontier = efficient_compute.grid_search(self.y_true, proba, objective1,
+                                                     objective2,
+                                                     self.infered_to_hard(self._val_thresholds),
+                                                     self._internal_groups, 
+                                                     steps=min(30, (30**5)**(1 / self._val_thresholds.shape[1])),
+                                                     directions=direction)
+            if _needs_groups(objective1):
+                objective1 = fix_groups(objective1, self._internal_groups)
+            if _needs_groups(objective2):
+                objective2 = fix_groups(objective2, self._internal_groups)
+            coarse_thresh = np.asarray(self._val_thresholds, dtype=np.float16)
+            weights = frontier[1]
+            new_weights = np.zeros((weights.shape[0], 2, weights.shape[1]))
+            new_weights[::-1, 0, :] = weights
+            self.frontier = fair_frontier.build_coarse_to_fine_front(objective1, objective2,
+                                                                     self.y_true, proba,
+                                                                     coarse_thresh,
+                                                                     directions=direction,
+                                                                     nr_of_recursive_calls=3,
+                                                                     initial_divisions=grid_width,
+                                                                     logit_scaling=self.logit_scaling,
+                                                                     existing_weights=new_weights)
+        elif self.use_fast:
             fact = self.cond_fact_to_numpy(self.conditioning_factor, self.validation_data)
             self.frontier = efficient_compute.grid_search(self.y_true, proba, objective1,
                                                           objective2,
@@ -357,7 +381,7 @@ class FairPredictor:
             fit() must be called first.
             parameters
             ----------
-            data: (optional) pandas dataset. If not specified, uses the data used to run fit.
+            data: (optional) pandas dataset or dict. If not specified, uses the data used to run fit.
             groups: (optional) groups data (see class definition). If not specified, uses the
                                 definition provided at initialisation
             objective1: (optional) an objective to be plotted, if not specified use the
@@ -390,6 +414,8 @@ class FairPredictor:
             labels = self.y_true
             proba = self.proba
             groups = self.groups_to_numpy(groups, data)
+            if groups is None:
+                groups = np.ones_like(labels)
             val_thresholds = self._val_thresholds
         else:
             if isinstance(data, dict):
@@ -404,6 +430,8 @@ class FairPredictor:
                 proba += np.random.normal(0, self.add_noise, proba.shape)
 
             groups = self.groups_to_numpy(groups, data)
+            if groups is None:
+                groups = np.ones_like(labels)
 
             if self.inferred_groups is False:
                 if self.groups is False:
@@ -415,7 +443,7 @@ class FairPredictor:
                     val_thresholds = call_or_get_proba(self.inferred_groups, data['data'])
                 else:
                     val_thresholds = call_or_get_proba(self.inferred_groups, data)
-        if self.use_fast is False:
+        if self.use_fast is not True:
             factor = self.cond_fact_to_numpy(self.conditioning_factor, data)
             if _needs_groups(objective1):
                 objective1 = fix_groups_and_conditioning(objective1,
@@ -628,6 +656,8 @@ class FairPredictor:
 
         groups = self.groups_to_numpy(groups, data)
         fact = self.cond_fact_to_numpy(fact, data)
+        if groups is None:
+            groups = np.ones_like(y_true, dtype=int)
         if return_original:
             score = orig_pred_proba[:, 1] - orig_pred_proba[:, 0]
             original = perf.evaluate_per_group(y_true, score, groups,
@@ -649,7 +679,7 @@ class FairPredictor:
         return out
 
     def predict_proba(self, data, *, transform_features=True):
-        """Duplicates the functionality of predictor.predict_proba with the updated predictor.
+        """Duplicates the functionality of predictor.predict_proba for fairpredictor.
         parameters
         ----------
         data a pandas array to make predictions over.
@@ -686,7 +716,7 @@ class FairPredictor:
                 onehot = call_or_get_proba(self.inferred_groups, data['data'])
             else:
                 onehot = call_or_get_proba(self.inferred_groups, data)
-        if self.use_fast:
+        if self.use_fast is True:
             tmp = np.zeros_like(proba)
             tmp[:, 1] = self.offset[self.infered_to_hard(onehot)]
         else:
@@ -697,11 +727,38 @@ class FairPredictor:
         return proba
 
     def predict(self, data, *, transform_features=True) -> pd.Series:
-        "duplicates the functionality of predictor.predict but with the fair predictor"
+        "duplicates the functionality of predictor.predict for fairpredictor"
         proba = self.predict_proba(data, transform_features=transform_features)
         if isinstance(proba, pd.DataFrame):
             return proba.idxmax(1)
         return np.argmax(proba, 1)
+
+    def extract_coefficients(self):
+        """Extracts coefficients used to combine the heads when creating a fair deep classifier.
+        This code assumes only two groups and that second head of the model is trained to output single 
+        values with target values 0 and 1 corresponding to membership of one of two protected groups.
+        If instead the second head returns  a 1-hot encoding, indicating membership of 2 or more groups,
+        use extract_coefficients_1_hot.
+        This code does not support objects created with use_fast=True.
+        Returns two coefficients.
+        1. a scalar a, and 
+        2. bias term b.
+        Such that head_1 + a * head_2 + b has the same outputs as our fair classifier. 
+        This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier. 
+        """
+        return self.offset[1, 0]-self.offset[0, 0], -self.offset[1, 0]
+
+    def extract_coefficients_1_hot(self):
+        """Extracts coefficients used to combine the heads when creating a fair deep classifier.
+        This code assumes that second head of the model is trained to output a one hot encoding
+        corresponding to membership of a protected group.
+        For more compact binary encodings see extract_coeefficents
+        This code does not support objects created with use_fast=True.
+        Returns a vector coefficient a.
+        Such that head_1 + a.dot(head_2) has the same outputs as our fair classifier.
+        This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier. 
+        """
+        return self.offset[:, 0]
 
 
 def _needs_groups(func) -> bool:
@@ -893,3 +950,82 @@ def build_data_dict(target, data, groups=None, conditioning_factor=None):
         assert target.shape[0] == conditioning_factor.shape[0]
         out['cond_fact'] = conditioning_factor
     return out
+
+
+def build_deep_dict(target, score, groups, groups_inferred=None, *, conditioning_factor=None):
+    """Wrapper around build_data_dict for deeplearning with inferred attributes.
+     It transforms the input data into a dict, and creates helper functions so 
+     fairpredictor treats them appropriately.
+     target: a numpy array containing the values the classifier should predict(AKA groundtruth)
+     score: a numpy array that is either size n by 1, and contains a logit output or n by (1 + #groups)
+     and is a concatination of the logit output with the inferered groups.
+     groups: a numpy array containing true group membership.
+     infered_groups: optional numpy array of size n by #groups. If score is n by 1, infered groups go here.
+    """
+    assert score.ndim == 2
+    assert target.ndim == 1
+    assert groups.ndim == 1
+    assert score.shape[0] == target.shape[0]
+    assert target.shape[0] == groups.shape[0]
+    if groups_inferred is not None:
+        assert score.shape[1] == 1
+        assert groups_inferred.ndim == 2
+        assert target.shape[0]==groups_inferred.shape[0]
+        data=np.stack((score, groups_inferred), 1)
+    else:
+        assert score.shape[1] > 1, 'When groups_inferred is None, score must also contain inferred group information'
+        data=score
+    return build_data_dict(target, data, groups, conditioning_factor=conditioning_factor)
+
+
+def DeepFairPredictor(target, score, groups, groups_inferred=None,
+                      *, conditioning_factor=None, truncate_logits=15,
+                      use_actual_groups=False, use_fast=None):
+    """Wrapper around FairPredictor for deeplearning with inferred attributes.
+     It transforms the input data into a dict, and creates helper functions so 
+     fairpredictor treats them appropriately.
+     target: a numpy array containing the values the classifier should predict(AKA groundtruth)
+     score: a numpy array that is either size n by 1, and contains a logit output or n by (1 + #groups)
+            and is a concatination of the logit output with the inferered groups.
+     groups: a numpy array containing true group membership.
+     infered_groups: optional numpy array of size n by #groups. If score is n by 1, infered groups go here.
+     truncated_logits: for performance reasons we truncate the logits to lie in [-10,10] by default. Change this here.
+     use_actual_groups: bool indicating if we should use actual or inferred groups to enforce fairness.
+     use_fast: True, False or 'hybrid' (hybrid is prefered for infered groups. Initialises the slow pathway 
+            with the output of the fast pathway). By default 'hybrid' unless use_actual_groups is true, in which
+            case True   
+     """
+    val_data = build_deep_dict(target, score, groups, groups_inferred, conditioning_factor=conditioning_factor)
+
+    def square_align(array):
+        return np.stack((array[:, 1], 1-array[:, 1]), 1)
+
+    def mult_group(array):
+        return array[:, 1:]
+    if groups_inferred:
+        if groups_inferred.shape[1] == 1:
+            group_fn = square_align
+        else:
+            group_fn = mult_group
+    else:
+        if score.shape[1] == 2:
+            group_fn = square_align
+        else:
+            group_fn = mult_group
+
+    def capped_identity(array):
+        array = np.minimum(array[:, 0], truncate_logits)
+        array = np.maximum(array, -truncate_logits)
+        return np.stack((-array / 2, array / 2), 1)
+
+    if use_fast is None:
+        if use_actual_groups:
+            use_fast = True
+        else:
+            use_fast = 'hybrid'
+    if use_actual_groups:
+        fpred = FairPredictor(capped_identity, val_data, threshold=0, use_fast=use_fast, logit_scaling=True)
+    else:
+        fpred = FairPredictor(capped_identity, val_data, inferred_groups=group_fn, threshold=0, 
+                              use_fast=use_fast, logit_scaling=True)
+    return fpred

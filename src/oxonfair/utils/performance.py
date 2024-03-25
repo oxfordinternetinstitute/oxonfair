@@ -74,6 +74,8 @@ def evaluate_fairness(target, prediction, groups, factor=None, *,
     a pandas dataset containing rows indexed by fairness measure name
     """
     threshold = find_threshold(threshold, prediction)
+    if groups is None:
+        groups = np.ones_like(target)
 
     if metrics is None:
         metrics = group_metrics.clarify_metrics

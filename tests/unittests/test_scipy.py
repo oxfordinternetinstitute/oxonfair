@@ -49,13 +49,13 @@ def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
         fpredictor = FairPredictor(predictor, val_dict, "sex_ Female")
     e1 = fpredictor.evaluate(val_dict)
     e2 = fpredictor.evaluate()
-    assert (e1==e2).all().all()
+    assert (e1 == e2).all().all()
     f1 = fpredictor.evaluate_fairness()
     f2 = fpredictor.evaluate_fairness(val_dict)
-    assert (f1==f2).all().all()
+    assert (f1 == f2).all().all()
     g1 = fpredictor.evaluate_groups(val_dict)
     g2 = fpredictor.evaluate_groups()
-    assert (g1==g2).all().all()
+    assert (g1 == g2).all().all()
     proba = fpredictor.predict_proba(val_dict)
     pred = fpredictor.predict(val_dict)
     if 'groups' not in val_dict:
@@ -71,9 +71,11 @@ def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
 
     fpredictor.evaluate_groups(test_dict)
 
+
 def test_base_with_groups():
     'Test base functionality holds when groups are provided'
     test_base_functionality(val_dict_g, test_dict_g)
+
 
 def test_implicit_groups():
     "try without using any value for groups"
