@@ -414,6 +414,8 @@ class FairPredictor:
             labels = self.y_true
             proba = self.proba
             groups = self.groups_to_numpy(groups, data)
+            if groups is None:
+                groups = np.ones_like(labels)
             val_thresholds = self._val_thresholds
         else:
             if isinstance(data, dict):
@@ -428,6 +430,8 @@ class FairPredictor:
                 proba += np.random.normal(0, self.add_noise, proba.shape)
 
             groups = self.groups_to_numpy(groups, data)
+            if groups is None:
+                groups = np.ones_like(labels)
 
             if self.inferred_groups is False:
                 if self.groups is False:
@@ -652,6 +656,8 @@ class FairPredictor:
 
         groups = self.groups_to_numpy(groups, data)
         fact = self.cond_fact_to_numpy(fact, data)
+        if groups is None:
+            groups = np.ones_like(y_true, dtype=int)
         if return_original:
             score = orig_pred_proba[:, 1] - orig_pred_proba[:, 0]
             original = perf.evaluate_per_group(y_true, score, groups,
