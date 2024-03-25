@@ -106,6 +106,8 @@ def sigmoid(x):
 
 def inv_sigmoid(x):
     "broadcastable inverse sigmoid function"
+    assert (x < 1).all()
+    assert (x > 0).all()
     return np.log(x / (1 - x))
 
 
@@ -128,15 +130,23 @@ def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refine
             maxs = sigmoid(maxs)
             mins = sigmoid(mins)
         diffs = maxs - mins
-        epsilon = diffs[diffs > 0].min()
+        if logit_scaling:
+            epsilon = 0.05
+        else:
+            epsilon = diffs[diffs > 0].min()
         mins -= epsilon
         maxs += epsilon
+        if logit_scaling:
+            maxs = np.minimum(maxs, 1 - epsilon)
+            mins = np.maximum(mins, epsilon)
     else:
         epsilon = refinement_factor.flatten()
         mins -= epsilon * 1.5
         maxs += epsilon * 1.51
 
     zero = np.zeros((1))
+    if logit_scaling:
+        zero = 0.5 * np.ones(1)
     if use_linspace:
         if logit_scaling:
             axx = [inv_sigmoid(np.linspace(mins[i], maxs[i], num=refinement_factor + 1))
@@ -157,6 +167,7 @@ def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refine
         for j in range(groups):
             weights[j, i] = mesh[(classes) * j + i]
     weights = weights.reshape((weights.shape[0], weights.shape[1], -1))
+    assert not np.isnan(weights).any()
     return weights
 
 
@@ -196,7 +207,8 @@ def build_coarse_to_fine_front(metric_1: callable,
                                initial_divisions=15,
                                nr_of_recursive_calls=5,
                                refinement_factor=4,
-                               logit_scaling=False) -> Tuple[np.ndarray, np.ndarray]:
+                               logit_scaling=False,
+                               existing_weights=None) -> Tuple[np.ndarray, np.ndarray]:
     """
     this function performs coarse-to-fine grid-search for computing the Pareto front
     """
@@ -229,6 +241,11 @@ def build_coarse_to_fine_front(metric_1: callable,
     new_front = front_from_weights(new_weights, y_true, proba, groups_infered, (metric_1, metric_2))
     weights = np.concatenate((new_weights, weights), -1)
     front = np.concatenate((new_front, front), -1)
+    if existing_weights is not None:
+        existing_front =  front_from_weights(existing_weights, y_true, proba, groups_infered, (metric_1, metric_2))
+        weights = np.concatenate((existing_weights, weights), -1)
+        front = np.concatenate((existing_front, front), -1)
+    
     front, weights = keep_front(front, weights, directions)
     for _ in range(nr_of_recursive_calls - 1):
         if weights.shape[-1] != 1:
