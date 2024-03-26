@@ -111,6 +111,12 @@ def test_no_groups(use_fast=True):
         fairp.plot_frontier(test_dict)
 
 
+def test_groups(use_fast=True):
+    "Check that evaluate correctly passes groups to fairness metrics"
+    fairp = fair.FairPredictor(predictor, val_dict, groups="sex_ Female", use_fast=use_fast)
+    assert fairp.evaluate(metrics={'EO': gm.equal_opportunity}).to_numpy().any()
+
+
 def test_predict(use_fast=True):
     "check that fairpredictor returns the same as a standard predictor before fit is called"
     fpredictor = fair.FairPredictor(

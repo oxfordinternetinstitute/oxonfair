@@ -513,16 +513,7 @@ class FairPredictor:
         _guard_predictor_data_match(data, self.predictor)
         if metrics is None:
             metrics = group_metrics.ag_metrics
-        groups = None
-        if data is not None:
-            if isinstance(data, dict):
-                groups = np.ones(data['data'].shape[0])
-            else:
-                groups = np.ones(data.shape[0])
-        else:
-            groups = np.ones(self.y_true.shape[0])
-
-        return self.evaluate_fairness(data, groups, metrics=metrics, verbose=verbose)
+        return self.evaluate_fairness(data, metrics=metrics, verbose=verbose)
 
     def evaluate_fairness(self, data=None, groups=None, factor=None, *,
                           metrics=None, verbose=True) -> pd.DataFrame:
@@ -971,10 +962,10 @@ def build_deep_dict(target, score, groups, groups_inferred=None, *, conditioning
         assert score.shape[1] == 1
         assert groups_inferred.ndim == 2
         assert target.shape[0]==groups_inferred.shape[0]
-        data=np.stack((score, groups_inferred), 1)
+        data = np.stack((score, groups_inferred), 1)
     else:
         assert score.shape[1] > 1, 'When groups_inferred is None, score must also contain inferred group information'
-        data=score
+        data = score
     return build_data_dict(target, data, groups, conditioning_factor=conditioning_factor)
 
 
