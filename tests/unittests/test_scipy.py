@@ -9,6 +9,7 @@ from oxonfair.utils import group_metrics as gm
 PLT_EXISTS = True
 try:
     import matplotlib.pyplot as plt
+    plt.title
 except ModuleNotFoundError:
     PLT_EXISTS = False
 
@@ -192,7 +193,7 @@ def test_min_recall(use_fast=True):
     )
     # Enforce that every group has a recall over 0.5
     fpredictor.fit(gm.accuracy, gm.recall.min, 0.5)
-    scores = fpredictor.evaluate_groups(return_original=False,verbose=False)
+    scores = fpredictor.evaluate_groups(return_original=False, verbose=False)
     assert all(scores["recall"][:-1] > 0.5)
 
 
@@ -201,9 +202,17 @@ def test_no_groups_slow():
     test_no_groups(False)
 
 
+def test_no_groups_hybrid():
+    test_no_groups('hybrid')
+
+
 def test_predict_slow():
     "test slow pathway"
     test_predict(False)
+
+
+def test_predict_hybrid():
+    test_predict('hybrid')
 
 
 def test_pathologoical2_slow():
@@ -211,25 +220,42 @@ def test_pathologoical2_slow():
     test_pathologoical2(False)
 
 
+def test_pathologoical2_hybrid():
+    test_pathologoical2('hybrid')
+
+
 def test_recall_diff_slow():
     "test slow pathway"
     test_recall_diff(False)
+
+
+def test_recall_diff_hybrid():
+    test_recall_diff('hybrid')
 
 
 def test_min_recall_slow():
     "test slow pathway"
     test_min_recall(False)
 
+
+def test_min_recall_hybrid():
+    test_min_recall('hybrid')
+
+
 def test_disp_impact_slow():
     "test slow pathway"
     test_disp_impact(False)
+
+
+def test_disp_impact_hybrid():
+    test_disp_impact('hybrid')
 
 
 def test_recall_diff_inferred(use_fast=True):
     "use infered attributes instead of provided attributes"
     # train two new classifiers one to predict class without using sex and one to fpredict sex without using class
     def move_to_groups(my_dict, key, drop):
-        new_dict= my_dict.copy()
+        new_dict = my_dict.copy()
         new_dict['groups'] = new_dict['data'][key]
         new_dict['data'] = new_dict['data'].drop(key, axis=1)
         new_dict['data'] = new_dict['data'].drop(drop, axis=1)
@@ -266,3 +292,7 @@ def test_recall_diff_inferred(use_fast=True):
 
 def test_recall_diff_inferred_slow():
     test_recall_diff_inferred(False)
+
+
+def test_recall_diff_inferred_hybrid():
+    test_recall_diff_inferred('hybrid')

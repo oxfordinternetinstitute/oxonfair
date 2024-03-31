@@ -91,8 +91,11 @@ class FairPredictor:
         # However, as a user interface groups = None makes more sense for instantiation.
         # This colides with the alternative use case where a dict is passed and groups
         # are estimated.
+        if use_fast == 'hybrid':
+            self.threshold = 0
+        else:
+            self.threshold = threshold
 
-        self.threshold = threshold
         self.groups = groups
         self.use_fast: bool = use_fast
         self.conditioning_factor = conditioning_factor
@@ -369,7 +372,7 @@ class FairPredictor:
             new_weights = np.zeros((weights.shape[0], 2, weights.shape[1]), dtype=weights.dtype)
             new_weights[::-1, 0, :] = weights
             self.frontier = call_slow(new_weights)
-        elif self.use_fast:
+        elif self.use_fast is True:
             self.frontier = call_fast()
         else:
             self.frontier = call_slow()
