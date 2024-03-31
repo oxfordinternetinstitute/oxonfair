@@ -34,6 +34,7 @@ test_y = val_test_y.drop(val.index)
 predictor = classifier_type()
 predictor.fit(train, train_y)
 
+train_dict = {"data": train, "target": train_y}
 val_dict = {"data": val, "target": val_y}
 test_dict = {"data": test, "target": test_y}
 
@@ -118,6 +119,14 @@ def test_predict(use_fast=True):
     )
     assert (predictor.predict(test) == fpredictor.predict(test_dict)).all()
     assert (predictor.predict_proba(test) == fpredictor.predict_proba(test_dict)).all()
+
+
+def test_pathologoical(use_fast=True):
+    "Returns a single constant classifier"
+    fpredictor = fair.FairPredictor(predictor, val_dict, groups="sex_ Female", use_fast=False)
+    fpredictor.fit(gm.roc_auc, gm.equalized_odds, 0.75)
+    fpredictor.plot_frontier()
+    fpredictor.evaluate_fairness()
 
 
 def test_pathologoical2(use_fast=True):
@@ -211,16 +220,31 @@ def test_min_recall_slow():
     "test slow pathway"
     test_min_recall(False)
 
+def test_disp_impact_slow():
+    "test slow pathway"
+    test_disp_impact(False)
 
-"""
+
 def test_recall_diff_inferred(use_fast=True):
     "use infered attributes instead of provided attributes"
     # train two new classifiers one to predict class without using sex and one to fpredict sex without using class
-    predictor, protected = fair.learners.inferred_attribute_builder(val_dict, 'class', 'sex_ Female',time_limit=3)
+    def move_to_groups(my_dict, key, drop):
+        new_dict= my_dict.copy()
+        new_dict['groups'] = new_dict['data'][key]
+        new_dict['data'] = new_dict['data'].drop(key, axis=1)
+        new_dict['data'] = new_dict['data'].drop(drop, axis=1)
+        return new_dict
+
+    new_train = move_to_groups(train_dict, "sex_ Female", 'sex_ Male')
+    new_val = move_to_groups(val_dict, "sex_ Female", 'sex_ Male')
+    predictor = classifier_type()
+    predictor.fit(new_train['data'], new_train['target'])
+    protected = classifier_type()
+    protected.fit(new_train['data'], new_train['groups'])
     # Build fair object using this and evaluate fairness n.b. classifier
     # accuracy decreases due to lack of access to the protected attribute, but
     # otherwise code is doing the same thing
-    fpredictor = fair.FairPredictor(predictor, val_dict, 'sex_ Female', inferred_groups=protected, use_fast=use_fast)
+    fpredictor = fair.FairPredictor(predictor, new_val, inferred_groups=protected, use_fast=use_fast)
 
     # Enforce that the new classifier will satisfy equalised odds (recall
     # difference between protected attributes of less than 2.5%) despite not
@@ -228,7 +252,7 @@ def test_recall_diff_inferred(use_fast=True):
 
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025)
 
-    measures = fpredictor.evaluate_fairness()
+    measures = fpredictor.evaluate_fairness(verbose=False)
 
     assert measures['original']['recall.diff'] > 0.025
 
@@ -236,10 +260,9 @@ def test_recall_diff_inferred(use_fast=True):
 
     # Prove that sex isn't being used by dropping it and reevaluating.
 
-    new_data = test_dict.drop('sex_ Female', axis=1, inplace=False)
-    fpredictor.evaluate_groups(new_data, test_dict['sex_ Female'])
+    fpredictor.evaluate_groups(new_train)
     # No test needed, code just has to run with sex dropped
+
 
 def test_recall_diff_inferred_slow():
     test_recall_diff_inferred(False)
-"""

@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from ..utils import group_metrics
+from .. utils.scipy_metrics_cont_wrapper import ScorerRequiresContPred
 from ..utils.group_metric_classes import BaseGroupMetric
+
 from ..utils import performance as perf
 from . import efficient_compute, fair_frontier
 
@@ -76,7 +78,8 @@ class FairPredictor:
                 return x
         if not is_not_autogluon(predictor) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
-
+        
+        assert use_fast == 'hybrid' or use_fast is False or use_fast is True
         # Check if sklearn
         _guard_predictor_data_match(validation_data, predictor)
         self.predictor = predictor
@@ -217,7 +220,8 @@ class FairPredictor:
 
     def fit(self, objective, constraint=group_metrics.accuracy, value=0.0, *,
             greater_is_better_obj=None, greater_is_better_const=None,
-            recompute=True, tol=False, grid_width=False, threshold=None):
+            recompute=True, tol=False, grid_width=False, threshold=None,
+            additional_constraints=()):
         """Fits the chosen predictor to optimize an objective while satisfing a constraint.
         parameters
         ----------
@@ -260,7 +264,8 @@ class FairPredictor:
             self.compute_frontier(objective, constraint,
                                   greater_is_better_obj1=greater_is_better_obj,
                                   greater_is_better_obj2=greater_is_better_const, tol=tol,
-                                  grid_width=grid_width)
+                                  grid_width=grid_width,
+                                  additional_constraints=additional_constraints)
         if greater_is_better_const:
             mask = self.frontier[0][1] >= value
         else:
@@ -282,7 +287,7 @@ class FairPredictor:
 
     def compute_frontier(self, objective1, objective2, greater_is_better_obj1,
                          greater_is_better_obj2, *, tol=False,
-                         grid_width=False) -> None:
+                         grid_width=False, additional_constraints=()) -> None:
         """ Computes the parato frontier. Internal logic used by fit
         parameters
         ----------
@@ -305,76 +310,73 @@ class FairPredictor:
         """
         self.objective1 = objective1
         self.objective2 = objective2
-
-        if self.use_fast is False:
-            factor = self.cond_fact_to_numpy(self.conditioning_factor, self.validation_data)
-            if _needs_groups(objective1):
-                objective1 = fix_groups_and_conditioning(objective1, self._internal_groups, factor)
-            if _needs_groups(objective2):
-                objective2 = fix_groups_and_conditioning(objective2, self._internal_groups, factor)
-        direction = np.ones(2)
+        objectives = (objective1, objective2) + tuple((a[0] for a in additional_constraints))
+        factor = self.cond_fact_to_numpy(self.conditioning_factor, self.validation_data)
+        direction = np.ones(2 + len(additional_constraints))
+        values = np.ones(len(additional_constraints))
         if greater_is_better_obj1 is False:
             direction[0] = -1
         if greater_is_better_obj2 is False:
             direction[1] = -1
 
-        if grid_width is False:
-            if self.use_fast is True:
-                grid_width = min(30, (30**5)**(1 / self._val_thresholds.shape[1]))
+        for i, c in enumerate(additional_constraints):
+            assert 3 >= len(c) >= 2
+            if len(c) == 2:
+                if c[0].greater_is_better is False:
+                    direction[2+i] = -1
             else:
-                grid_width = 14
-                if self._val_thresholds.shape[1] == 2:
-                    grid_width = 18
-
-        self.round = tol
+                assert c[2] == '<' or c[2] == '>'
+                if c[2] == '<':
+                    direction[2+i] = -1
+            values[i] = c[1]
 
         proba = self.proba
+        self.round = tol
+
         if tol is not False:
             proba = np.around(self.proba / tol) * tol
+
+        def call_slow(existing_weights=None):
+            fix_obj = [fix_groups_and_conditioning(obj, self._internal_groups, factor) for obj in objectives]
+            if grid_width is False:
+                gw = 18
+            else:
+                gw = grid_width
+            coarse_thresh = np.asarray(self._val_thresholds, dtype=np.float16)
+            return fair_frontier.build_coarse_to_fine_front(fix_obj,
+                                                            self.y_true, proba,
+                                                            coarse_thresh,
+                                                            directions=direction,
+                                                            nr_of_recursive_calls=3,
+                                                            initial_divisions=gw,
+                                                            logit_scaling=self.logit_scaling,
+                                                            existing_weights=existing_weights,
+                                                            additional_constraints=values)
+
+        def call_fast(grid_width=grid_width):
+            if grid_width is False:
+                grid_width = min(30, (30**5)**(1 / self._val_thresholds.shape[1]))
+            return efficient_compute.grid_search(self.y_true, proba, objectives,
+                                                 self.infered_to_hard(self._val_thresholds),
+                                                 self._internal_groups, 
+                                                 steps=min(30, (30**5)**(1 / self._val_thresholds.shape[1])),
+                                                 directions=direction,
+                                                 additional_constraints=values)
+
         if self.use_fast == 'hybrid':
-            frontier = efficient_compute.grid_search(self.y_true, proba, objective1,
-                                                     objective2,
-                                                     self.infered_to_hard(self._val_thresholds),
-                                                     self._internal_groups, 
-                                                     steps=min(30, (30**5)**(1 / self._val_thresholds.shape[1])),
-                                                     directions=direction)
-            if _needs_groups(objective1):
-                objective1 = fix_groups(objective1, self._internal_groups)
-            if _needs_groups(objective2):
-                objective2 = fix_groups(objective2, self._internal_groups)
-            coarse_thresh = np.asarray(self._val_thresholds, dtype=np.float16)
+            frontier = call_fast(min(grid_width, min(30, (30**5)**(1 / self._val_thresholds.shape[1]))))
             weights = frontier[1]
-            new_weights = np.zeros((weights.shape[0], 2, weights.shape[1]))
+            new_weights = np.zeros((weights.shape[0], 2, weights.shape[1]), dtype=weights.dtype)
             new_weights[::-1, 0, :] = weights
-            self.frontier = fair_frontier.build_coarse_to_fine_front(objective1, objective2,
-                                                                     self.y_true, proba,
-                                                                     coarse_thresh,
-                                                                     directions=direction,
-                                                                     nr_of_recursive_calls=3,
-                                                                     initial_divisions=grid_width,
-                                                                     logit_scaling=self.logit_scaling,
-                                                                     existing_weights=new_weights)
+            self.frontier = call_slow(new_weights)
         elif self.use_fast:
-            fact = self.cond_fact_to_numpy(self.conditioning_factor, self.validation_data)
-            self.frontier = efficient_compute.grid_search(self.y_true, proba, objective1,
-                                                          objective2,
-                                                          self.infered_to_hard(self._val_thresholds),
-                                                          self._internal_groups, steps=grid_width,
-                                                          directions=direction,
-                                                          factor=fact)
+            self.frontier = call_fast()
         else:
-            coarse_thresh = np.asarray(self._val_thresholds, dtype=np.float16)
-            self.frontier = fair_frontier.build_coarse_to_fine_front(objective1, objective2,
-                                                                     self.y_true, proba,
-                                                                     coarse_thresh,
-                                                                     directions=direction,
-                                                                     nr_of_recursive_calls=3,
-                                                                     initial_divisions=grid_width,
-                                                                     logit_scaling=self.logit_scaling)
+            self.frontier = call_slow()
 
     def plot_frontier(self, data=None, groups=None, *, objective1=False, objective2=False,
                       show_updated=True, show_original=True, color=None, new_plot=True, prefix='',
-                      name_frontier='Frontier') -> None:
+                      name_frontier='Frontier',subfig=None) -> None:
         """ Plots an existing parato frontier with respect to objective1 and objective2.
             These do not need to be the same objectives as used when computing the frontier
             The original predictor, and the predictor selected by fit is shown in different colors.
@@ -403,11 +405,19 @@ class FairPredictor:
 
         objective1 = objective1 or self.objective1
         objective2 = objective2 or self.objective2
-        if new_plot:
+        if not subfig and new_plot:
             plt.figure()
-        plt.title('Frontier found')
-        plt.xlabel(objective2.name)
-        plt.ylabel(objective1.name)
+        if subfig:
+            ax = subfig
+            ax.set_title('Frontier found')
+            ax.set_ylabel(objective1.name)
+            ax.set_xlabel(objective2.name)
+        else:
+            ax = plt
+            ax.title('Frontier Found')
+            ax.ylabel(objective1.name)
+            ax.xlabel(objective2.name)
+
 
         if data is None:
             data = self.validation_data
@@ -485,14 +495,14 @@ class FairPredictor:
                                                         self.infered_to_hard(val_thresholds),
                                                         self.offset[:, np.newaxis])
         if color is None:
-            plt.scatter(front2, front1, label=prefix+name_frontier)
+            ax.scatter(front2, front1, label=prefix+name_frontier)
             if show_original:
-                plt.scatter(zero[1], zero[0], s=40, label='Original predictor', marker='*')
+                ax.scatter(zero[1], zero[0], s=40, label='Original predictor', marker='*')
             if show_updated:
-                plt.scatter(front2_u, front1_u, s=40, label=prefix+'Updated predictor', marker='s')
-            plt.legend(loc='best')
+                ax.scatter(front2_u, front1_u, s=40, label=prefix+'Updated predictor', marker='s')
+            ax.legend(loc='best')
         else:
-            plt.scatter(front2, front1, c=color)
+            ax.scatter(front2, front1, c=color)
 
     def evaluate(self, data=None, metrics=None, verbose=True) -> pd.DataFrame:
         """Compute standard metrics of the original predictor and the updated predictor
@@ -842,8 +852,12 @@ def fix_groups(metric: BaseGroupMetric, groups):
     a function that takes y_true and y_pred as an input.
 
         todo: return scorable"""
-    groups = np.asarray(groups)
+    if (isinstance(metric, ScorerRequiresContPred) or
+       (AUTOGLUON_EXISTS and isinstance(metric, Scorer) and (metric.needs_pred is False))):
+        return metric
 
+    groups = np.asarray(groups)
+    
     def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
         return metric(y_true, y_pred, groups)
     return new_metric
@@ -928,10 +942,10 @@ def dispatch_metric(metric: BaseGroupMetric, y_true, proba, groups, factor) -> n
         return np.nan
 
 
-def single_offset(x):
+def single_threshold(x):
     """A helper function. Allows you to measure and enforces fairness and performance measures
     by altering a single threshold for all groups.
-    To use call FairPredictor with the argument infered_groups=single_offset"""
+    To use call FairPredictor with the argument infered_groups=single_threshold"""
     return np.zeros((x.shape[0], 1))
 
 
@@ -971,10 +985,10 @@ def build_deep_dict(target, score, groups, groups_inferred=None, *, conditioning
         assert score.shape[1] == 1
         assert groups_inferred.ndim == 2
         assert target.shape[0]==groups_inferred.shape[0]
-        data=np.stack((score, groups_inferred), 1)
+        data = np.stack((score, groups_inferred), 1)
     else:
         assert score.shape[1] > 1, 'When groups_inferred is None, score must also contain inferred group information'
-        data=score
+        data = score
     return build_data_dict(target, data, groups, conditioning_factor=conditioning_factor)
 
 
@@ -982,7 +996,7 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
                       *, conditioning_factor=None, truncate_logits=15,
                       use_actual_groups=False, use_fast=None):
     """Wrapper around FairPredictor for deeplearning with inferred attributes.
-     It transforms the input data into a dict, and creates helper functions so 
+     It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
      target: a numpy array containing the values the classifier should predict(AKA groundtruth)
      score: a numpy array that is either size n by 1, and contains a logit output or n by (1 + #groups)
@@ -1023,8 +1037,11 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
             use_fast = True
         else:
             use_fast = 'hybrid'
-    if use_actual_groups:
+    if use_actual_groups is True:
         fpred = FairPredictor(capped_identity, val_data, threshold=0, use_fast=use_fast, logit_scaling=True)
+    if use_actual_groups == 'single_threshold':
+        fpred = FairPredictor(capped_identity, val_data, inferred_groups=single_threshold,
+                              threshold=0, use_fast=use_fast, logit_scaling=True)
     else:
         fpred = FairPredictor(capped_identity, val_data, inferred_groups=group_fn, threshold=0, 
                               use_fast=use_fast, logit_scaling=True)

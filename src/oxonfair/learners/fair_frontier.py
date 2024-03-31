@@ -2,7 +2,8 @@
 while efficient_compute is only compatable with group metrics"""
 from typing import Callable, Tuple
 import numpy as np
-
+from .efficient_compute import keep_front
+from ..utils.scipy_metrics_cont_wrapper import ScorerRequiresContPred
 AUTOGLUON_EXISTS = True
 try:
     from autogluon.core.metrics import Scorer
@@ -19,17 +20,21 @@ def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
     y_true = np.asarray(y_true)
     threshold_assignment = np.asarray(threshold_assignment)
 
-    pass_scores = AUTOGLUON_EXISTS and isinstance(metric, Scorer) and (metric.needs_pred is False)
-    # Consider preallocation because this next loop is the system bottleneck
+    pass_scores = (isinstance(metric, ScorerRequiresContPred) or
+                   (AUTOGLUON_EXISTS and isinstance(metric, Scorer) and (metric.needs_pred is False)))
+    # Preallocate because this next loop is the system bottleneck
+    tmp = np.empty((threshold_assignment.shape[0], weights.shape[1]), dtype=threshold_assignment.dtype)
+    pred = np.empty(threshold_assignment.shape[0], dtype=int)
     for i in range(weights.shape[-1]):
-        tmp = threshold_assignment.dot(weights[:, :, i])
+        np.dot(threshold_assignment, weights[:, :, i], tmp)
         if pass_scores is False:
-            pred = (proba + tmp).argmax(-1)
+            tmp += proba
+            np.argmax(tmp, -1, pred)
             score[i] = metric(y_true, pred)[0]
         else:
-            add = proba + tmp
-            diff = add[:, 1] - add[:, 0]
-            score[i] = metric(y_true, diff)
+            tmp += proba
+            tmp[:, 1] -= tmp[:, 0]
+            score[i] = metric(y_true, tmp[:, 1])
     return score
 
 
@@ -44,7 +49,8 @@ def sort_by_front(front: np.ndarray, weights: np.ndarray) -> Tuple[np.ndarray, n
 # https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
 
 
-def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: np.ndarray,
+def keep_front_old(solutions: np.ndarray, initial_weights: np.ndarray, directions: np.ndarray,
+               additional_constraints,
                *, tol=1e-12) -> Tuple[np.ndarray, np.ndarray]:
     """Modified from
         https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
@@ -57,6 +63,9 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
     front *= directions
 
     weights = initial_weights.T.copy()
+    # check if additional_constraints exist, and if so use them to filter the data.
+    # if additional_constraints is not None:
+        
     # sort points by decreasing sum of coordinates
     # Add 10**-6 * magnitude of weights so that in the event of a near tie, pick points close
     # to 0 first
@@ -133,7 +142,10 @@ def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refine
         if logit_scaling:
             epsilon = 0.05
         else:
-            epsilon = diffs[diffs > 0].min()
+            if any(diffs > 0):
+                epsilon = diffs[diffs > 0].min()
+            else:
+                epsilon = 0.05
         mins -= epsilon
         maxs += epsilon
         if logit_scaling:
@@ -182,7 +194,7 @@ def make_finer_grid(weights: np.ndarray, refinement_factor=2, use_linspace=True)
                                             use_linspace=use_linspace)
                    for ell in range(weights.shape[-1] - 1)]
     output = np.concatenate(new_weights, axis=2)
-    output = np.concatenate((output, np.zeros((output.shape[0], output.shape[1], 1))), axis=2)
+    output = np.concatenate((output, np.zeros((output.shape[0], output.shape[1], 1), dtype=np.float16)), axis=2)
     output = np.unique(output, axis=-1)
 
     return output
@@ -197,8 +209,7 @@ def front_from_weights(weights: np.ndarray, y_true: np.ndarray, proba: np.ndarra
     return front
 
 
-def build_coarse_to_fine_front(metric_1: callable,
-                               metric_2: callable,
+def build_coarse_to_fine_front(metrics: Tuple[callable],
                                y_true: np.ndarray,
                                proba: np.ndarray,
                                groups_infered: np.ndarray,
@@ -208,10 +219,12 @@ def build_coarse_to_fine_front(metric_1: callable,
                                nr_of_recursive_calls=5,
                                refinement_factor=4,
                                logit_scaling=False,
-                               existing_weights=None) -> Tuple[np.ndarray, np.ndarray]:
+                               existing_weights=None,
+                               additional_constraints=()) -> Tuple[np.ndarray, np.ndarray]:
     """
     this function performs coarse-to-fine grid-search for computing the Pareto front
     """
+    assert len(metrics) >= 2
     assert groups_infered.ndim == 2
     assert nr_of_recursive_calls > 0
     groups = groups_infered.shape[1]
@@ -228,8 +241,8 @@ def build_coarse_to_fine_front(metric_1: callable,
     weights = make_grid_between_points(min_initial, max_initial,
                                        refinement_factor=initial_divisions - 1,
                                        logit_scaling=logit_scaling)
-    front = front_from_weights(weights, y_true, proba, groups_infered, (metric_1, metric_2))
-    front, weights = keep_front(front, weights, directions)
+    front = front_from_weights(weights, y_true, proba, groups_infered, metrics)
+    front, weights = keep_front(front, weights, directions, additional_constraints)
     # second stage
     mins = weights[:, :-1].min(-1)  # drop zeros
     maxs = weights[:, :-1].max(-1)
@@ -238,30 +251,30 @@ def build_coarse_to_fine_front(metric_1: callable,
     eps = ((maxs - mins))
     new_weights = make_grid_between_points(mins, maxs, refinement_factor=initial_divisions,
                                            add_zero=True, logit_scaling=logit_scaling)
-    new_front = front_from_weights(new_weights, y_true, proba, groups_infered, (metric_1, metric_2))
+    new_front = front_from_weights(new_weights, y_true, proba, groups_infered, metrics)
     weights = np.concatenate((new_weights, weights), -1)
     front = np.concatenate((new_front, front), -1)
     if existing_weights is not None:
-        existing_front =  front_from_weights(existing_weights, y_true, proba, groups_infered, (metric_1, metric_2))
+        existing_weights = existing_weights.astype(weights.dtype)
+        existing_front = front_from_weights(existing_weights, y_true, proba, groups_infered, metrics)
         weights = np.concatenate((existing_weights, weights), -1)
         front = np.concatenate((existing_front, front), -1)
-    
-    front, weights = keep_front(front, weights, directions)
+
+    front, weights = keep_front(front, weights, directions, additional_constraints)
     for _ in range(nr_of_recursive_calls - 1):
         if weights.shape[-1] != 1:
             eps /= refinement_factor
             new_weights = make_finer_grid(weights, eps, use_linspace=False)
             new_front = front_from_weights(new_weights, y_true, proba, groups_infered,
-                                           (metric_1, metric_2))
+                                           metrics)
             weights = np.concatenate((new_weights, weights), -1)
             front = np.concatenate((new_front, front), -1)
-        front, weights = keep_front(front, weights, directions)
+            front, weights = keep_front(front, weights, directions, additional_constraints)
 
     # densify the front with uniform interpolation
     if weights.shape[-1] > 1:
         weights = linear_interpolate(front, weights, gap=0.02)
-        front = np.stack((compute_metric(metric_1, y_true, proba, groups_infered, weights),
-                          compute_metric(metric_2, y_true, proba, groups_infered, weights)))
-        front, weights = keep_front(front, weights, directions)
+        front = front_from_weights(weights, y_true, proba, groups_infered, metrics)
+        front, weights = keep_front(front, weights, directions, additional_constraints)
 
     return front, weights
