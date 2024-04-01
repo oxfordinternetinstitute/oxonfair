@@ -60,7 +60,7 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
             another point in the frontier)  should be dropped.
             This is used to eliminate ties, and to discard most of the constant classifiers.
         additional constrains: vector of floats of size frontier width - 2
-            These are hard constraints any point will be discarded if  
+            These are hard constraints any point will be discarded if
             solution[i+2]*direction<additional_constraints[i]*direction .
         returns
         -------
@@ -346,7 +346,6 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
     # at a particular value. It is of size (4, groups) because the group assignment may come at test
     # time from an inaccurate classifier
 
-    # test_cum_sum(accum_count, groups)
     # now for the computational bottleneck
     bottom = np.zeros(groups)
     top = np.asarray([s.shape[0] for s in ordered_encode])

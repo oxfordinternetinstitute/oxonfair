@@ -49,52 +49,6 @@ def sort_by_front(front: np.ndarray, weights: np.ndarray) -> Tuple[np.ndarray, n
 # https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
 
 
-def keep_front_old(solutions: np.ndarray, initial_weights: np.ndarray, directions: np.ndarray,
-               additional_constraints,
-               *, tol=1e-12) -> Tuple[np.ndarray, np.ndarray]:
-    """Modified from
-        https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
-        Returns Pareto efficient row subset of solutions and its associated weights
-        Direction is a vector that governs if the frontier should maximize or minimize each
-        direction.
-        Where an element of direction is positive frontier maximizes, negative, it mimizes.
-        """
-    front = solutions.T.copy()
-    front *= directions
-
-    weights = initial_weights.T.copy()
-    # check if additional_constraints exist, and if so use them to filter the data.
-    # if additional_constraints is not None:
-        
-    # sort points by decreasing sum of coordinates
-    # Add 10**-6 * magnitude of weights so that in the event of a near tie, pick points close
-    # to 0 first
-    order = (front.sum(1) - (10**-6) * np.abs(weights).sum(1).sum(1)).argsort()[::-1]
-    front = front[order]
-    weights = weights[order]
-    # initialize a boolean mask for currently undominated points
-    undominated = np.ones(front.shape[0], dtype=bool)
-    for i in range(front.shape[0]):
-        # process each point in turn
-        points_left = front.shape[0]
-        if i >= points_left:
-            break
-        # find all points not dominated by i
-        # since points are sorted by coordinate sum
-        # i cannot dominate any points in 1,...,i-1
-        undominated[i] = True  # Bug fix missing from online version
-        undominated[i + 1:points_left] = (front[i + 1:] >= front[i] + tol).any(1)
-        # keep points undominated so far
-        front = front[undominated[:points_left]]
-        weights = weights[undominated[:points_left]]
-    weights = weights.T
-    if directions is not False:
-        front *= directions
-    front = front.T
-    front, weights = sort_by_front(front, weights)
-
-    return front, weights
-
 
 def linear_interpolate(front: np.ndarray, weights: np.ndarray, gap=0.01) -> np.ndarray:
     """we want the points found to cover the frontier i.e. there should be no big gaps in w.
