@@ -47,7 +47,7 @@ def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
     "not calling fit should not alter predict or predict_proba"
     if 'groups' in val_dict:
         fpredictor = FairPredictor(predictor, val_dict)
-    else:    
+    else:
         fpredictor = FairPredictor(predictor, val_dict, "sex_ Female")
     e1 = fpredictor.evaluate(val_dict)
     e2 = fpredictor.evaluate()
@@ -61,7 +61,7 @@ def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
     proba = fpredictor.predict_proba(val_dict)
     pred = fpredictor.predict(val_dict)
     if 'groups' not in val_dict:
-        proba2 = predictor.predict_proba(val_dict["data"]) 
+        proba2 = predictor.predict_proba(val_dict["data"])
         assert (proba == proba2).all().all()
         assert (pred == predictor.predict(val_dict["data"])).all().all()
 

@@ -78,7 +78,7 @@ class FairPredictor:
                 return x
         if not is_not_autogluon(predictor) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
-        
+
         assert use_fast == 'hybrid' or use_fast is False or use_fast is True
         # Check if sklearn
         _guard_predictor_data_match(validation_data, predictor)
@@ -156,11 +156,11 @@ class FairPredictor:
         self.objective2 = None
         self.round = False
 
-    def _to_numpy(self, groups, data, name='groups', none_replace=None) -> np.ndarray:
+    def _to_numpy(self, x, data, name='groups', none_replace=None) -> np.ndarray:
         """helper function for transforming groups into a numpy array of unique values
         parameters
         ----------
-        groups: one of the standard represenations of groups (see class doc)
+        x: a standard represenations such as might be used for groups (see class doc)
         data: a pandas dataframe or a dict containing data
         returns
         -------
@@ -168,24 +168,24 @@ class FairPredictor:
         """
         if data is None:
             data = self.validation_data
-        if groups is None and isinstance(data, dict):
-            groups = data.get(name, None)
-        if groups is None:
-            groups = none_replace
+        if x is None and isinstance(data, dict):
+            x = data.get(name, None)
+        if x is None:
+            x = none_replace
         if isinstance(data, dict):
             data = data['data']
-        if groups is False:
+        if x is False:
             return np.zeros(data.shape[0])
 
-        if callable(groups):
-            return self.infered_to_hard(groups(data))
-        if isinstance(groups, str):
-            return np.asarray(data[groups])
-        if isinstance(groups, int):
-            return np.asarray(data[:, groups])
-        if groups is None:
+        if callable(x):
+            return self.infered_to_hard(x(data))
+        if isinstance(x, str):
+            return np.asarray(data[x])
+        if isinstance(x, int):
+            return np.asarray(data[:, x])
+        if x is None:
             return None
-        return np.asarray(groups)
+        return np.asarray(x)
 
     def groups_to_numpy(self, groups, data):
         """helper function for transforming groups into a numpy array of unique values
@@ -361,7 +361,7 @@ class FairPredictor:
                 grid_width = min(30, (30**5)**(1 / self._val_thresholds.shape[1]))
             return efficient_compute.grid_search(self.y_true, proba, objectives,
                                                  self.infered_to_hard(self._val_thresholds),
-                                                 self._internal_groups, 
+                                                 self._internal_groups,
                                                  steps=min(30, (30**5)**(1 / self._val_thresholds.shape[1])),
                                                  directions=direction,
                                                  additional_constraints=values)
@@ -420,7 +420,6 @@ class FairPredictor:
             ax.title('Frontier Found')
             ax.ylabel(objective1.name)
             ax.xlabel(objective2.name)
-
 
         if data is None:
             data = self.validation_data
@@ -748,16 +747,16 @@ class FairPredictor:
 
     def extract_coefficients(self):
         """Extracts coefficients used to combine the heads when creating a fair deep classifier.
-        This code assumes only two groups and that second head of the model is trained to output single 
+        This code assumes only two groups and that second head of the model is trained to output single
         values with target values 0 and 1 corresponding to membership of one of two protected groups.
         If instead the second head returns  a 1-hot encoding, indicating membership of 2 or more groups,
         use extract_coefficients_1_hot.
         This code does not support objects created with use_fast=True.
         Returns two coefficients.
-        1. a scalar a, and 
+        1. a scalar a, and
         2. bias term b.
-        Such that head_1 + a * head_2 + b has the same outputs as our fair classifier. 
-        This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier. 
+        Such that head_1 + a * head_2 + b has the same outputs as our fair classifier.
+        This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier.
         """
         return self.offset[1, 0]-self.offset[0, 0], -self.offset[1, 0]
 
@@ -769,7 +768,7 @@ class FairPredictor:
         This code does not support objects created with use_fast=True.
         Returns a vector coefficient a.
         Such that head_1 + a.dot(head_2) has the same outputs as our fair classifier.
-        This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier. 
+        This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier.
         """
         return self.offset[:, 0]
 
@@ -860,7 +859,7 @@ def fix_groups(metric: BaseGroupMetric, groups):
         return metric
 
     groups = np.asarray(groups)
-    
+
     def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
         return metric(y_true, y_pred, groups)
     return new_metric
@@ -971,7 +970,7 @@ def build_data_dict(target, data, groups=None, conditioning_factor=None):
 
 def build_deep_dict(target, score, groups, groups_inferred=None, *, conditioning_factor=None):
     """Wrapper around build_data_dict for deeplearning with inferred attributes.
-     It transforms the input data into a dict, and creates helper functions so 
+     It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
      target: a numpy array containing the values the classifier should predict(AKA groundtruth)
      score: a numpy array that is either size n by 1, and contains a logit output or n by (1 + #groups)
@@ -1008,9 +1007,9 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
      infered_groups: optional numpy array of size n by #groups. If score is n by 1, infered groups go here.
      truncated_logits: for performance reasons we truncate the logits to lie in [-10,10] by default. Change this here.
      use_actual_groups: bool indicating if we should use actual or inferred groups to enforce fairness.
-     use_fast: True, False or 'hybrid' (hybrid is prefered for infered groups. Initialises the slow pathway 
+     use_fast: True, False or 'hybrid' (hybrid is prefered for infered groups. Initialises the slow pathway
             with the output of the fast pathway). By default 'hybrid' unless use_actual_groups is true, in which
-            case True   
+            case True
      """
     val_data = build_deep_dict(target, score, groups, groups_inferred, conditioning_factor=conditioning_factor)
 
@@ -1046,6 +1045,6 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
         fpred = FairPredictor(capped_identity, val_data, inferred_groups=single_threshold,
                               threshold=0, use_fast=use_fast, logit_scaling=True)
     else:
-        fpred = FairPredictor(capped_identity, val_data, inferred_groups=group_fn, threshold=0, 
+        fpred = FairPredictor(capped_identity, val_data, inferred_groups=group_fn, threshold=0,
                               use_fast=use_fast, logit_scaling=True)
     return fpred
