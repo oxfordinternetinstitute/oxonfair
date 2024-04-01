@@ -176,7 +176,7 @@ class GroupRatio(BaseGroupMetric):
     def __call__(self, *args: np.ndarray) -> np.ndarray:
         array = self.build_array(args)
         val = self.func(*array)
-        return val.min(-1) / (1e-6 + val.max(-1))
+        return val.min(-1) / np.maximum(1e-12,val.max(-1))
 
 
 class Overall(BaseGroupMetric):

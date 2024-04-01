@@ -45,7 +45,6 @@ def test_metrics_identities():
                       1 - gm.false_pos_rate(array1, array2, array3)).all()
     accuracy = gm.Utility([1, 0, 0, 1], 'accuracy')
     assert np.isclose(gm.accuracy(array1, array2, array3), accuracy(array1, array2, array3)).all()
-    # assert np.isclose(gm.(A,B,array3),1-gm.(A,B,array3)).all()
     # check that additive_metrics can be called.
     assert np.isclose(gm.equalized_odds(array1, array2, array3),
                       (gm.true_pos_rate.diff(array1, array2, array3)

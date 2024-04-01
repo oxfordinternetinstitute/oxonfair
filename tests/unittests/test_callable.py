@@ -3,13 +3,13 @@ import oxonfair
 from oxonfair.utils import group_metrics as gm
 
 
-val = np.random.randn(1000, 2)  # np.load('outputs_val.npy')
-val_target = np.random.randn(1000) > 0  # np.load('target_labels_val.npy')
-val_groups = np.random.randn(1000) > 0  # np.load('protected_labels_val.npy')
+val = np.random.randn(1000, 2)  #
+val_target = np.random.randn(1000) > 0
+val_groups = np.random.randn(1000) > 0
 
-test = np.random.randn(1001, 2)  # np.load('outputs_test.npy')
-test_target = np.random.randn(1001) > 0  # np.load('target_labels_test.npy')
-test_groups = np.random.randn(1001) > 0  # np.load('protected_labels_test.npy')
+test = np.random.randn(1001, 2)
+test_target = np.random.randn(1001) > 0
+test_groups = np.random.randn(1001) > 0
 
 
 def sigmoid(array):

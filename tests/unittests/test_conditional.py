@@ -1,15 +1,18 @@
 import pandas as pd
 import numpy as np
-from autogluon.tabular import TabularDataset, TabularPredictor
 import oxonfair as fair
 from oxonfair.utils import group_metrics as gm
 from oxonfair.utils import conditional_group_metrics as cgm
 
-train_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv")
-test_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv")
-predictor = TabularPredictor(label="class").fit(train_data=train_data, time_limit=3)
-
-new_test = test_data[~test_data["race"].isin([" Other", " Asian-Pac-Islander"])]
+try:
+    from autogluon.tabular import TabularDataset, TabularPredictor
+    AUTOGLUON_EXISTS=True
+    train_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv")
+    test_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv")
+    predictor = TabularPredictor(label="class").fit(train_data=train_data, time_limit=3)
+    new_test = test_data[~test_data["race"].isin([" Other", " Asian-Pac-Islander"])]
+except ModuleNotFoundError:
+    AUTOGLUON_EXISTS=False
 # drop other
 
 
@@ -94,6 +97,8 @@ def test_conditional_is_consistent():
 
 
 def test_class(use_fast=True):
+    if not AUTOGLUON_EXISTS:
+        return
     "check base functionality is there"
     fpredictor = fair.FairPredictor(
         predictor, test_data, "sex", conditioning_factor="race", use_fast=use_fast
