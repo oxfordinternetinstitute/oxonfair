@@ -379,7 +379,7 @@ class FairPredictor:
 
     def plot_frontier(self, data=None, groups=None, *, objective1=False, objective2=False,
                       show_updated=True, show_original=True, color=None, new_plot=True, prefix='',
-                      name_frontier='Frontier',subfig=None) -> None:
+                      name_frontier='Frontier', subfig=None) -> None:
         """ Plots an existing parato frontier with respect to objective1 and objective2.
             These do not need to be the same objectives as used when computing the frontier
             The original predictor, and the predictor selected by fit is shown in different colors.
@@ -880,7 +880,7 @@ def fix_conditioning(metric: BaseGroupMetric, conditioning_factor):
     return new_metric
 
 
-def fix_groups_and_conditioning(metric: BaseGroupMetric, groups, conditioning_factor):
+def fix_groups_and_conditioning(metric, groups, conditioning_factor):
     """fixes the choice of groups and conditioning factor so that BaseGroupMetrics can be passed as
     Scorable analogs to the slow pathway.
 
@@ -905,7 +905,7 @@ def fix_groups_and_conditioning(metric: BaseGroupMetric, groups, conditioning_fa
     return new_metric
 
 
-def dispatch_metric(metric: BaseGroupMetric, y_true, proba, groups, factor) -> np.ndarray:
+def dispatch_metric(metric, y_true, proba, groups, factor) -> np.ndarray:
     """Helper function for making sure different types of Scorer and GroupMetrics get the right data
 
     Parameters
@@ -946,12 +946,13 @@ def build_data_dict(target, data, groups=None, conditioning_factor=None):
     "Helper function that builds dictionaries for use with sklearn classifiers"
     assert target.shape[0] == data.shape[0]
     assert data.ndim == 2
-    assert target.ndim == 1
+    assert target.ndim == 1 or (target.ndim == 2 and target.shape[1] == 1)
+    target = np.asarray(target).reshape(-1)
     out = {'target': target, 'data': data}
     if groups is not None:
         assert target.shape[0] == groups.shape[0]
-        assert groups.ndim == 1
-        out['groups'] = groups
+        assert groups.ndim == 1 or (groups.ndim == 2 and groups.shape[1] == 1)
+        out['groups'] = np.asarray(groups).reshape(-1)
     if conditioning_factor is not None:
         assert conditioning_factor.ndim == 1
         assert target.shape[0] == conditioning_factor.shape[0]
@@ -977,17 +978,17 @@ def build_deep_dict(target, score, groups, groups_inferred=None, *, conditioning
     if groups_inferred is not None:
         assert score.shape[1] == 1
         assert groups_inferred.ndim == 2
-        assert target.shape[0]==groups_inferred.shape[0]
+        assert target.shape[0] == groups_inferred.shape[0]
         data = np.stack((score, groups_inferred), 1)
     else:
-        assert score.shape[1] > 1, 'When groups_inferred is None, score must also contain inferred group information'
+        # assert score.shape[1] > 1, 'When groups_inferred is None, score must also contain inferred group information'
         data = score
     return build_data_dict(target, data, groups, conditioning_factor=conditioning_factor)
 
 
 def DeepFairPredictor(target, score, groups, groups_inferred=None,
                       *, conditioning_factor=None, truncate_logits=15,
-                      use_actual_groups=False, use_fast=None):
+                      use_actual_groups=False, use_fast=None, logit_scaling=False):
     """Wrapper around FairPredictor for deeplearning with inferred attributes.
      It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
@@ -997,7 +998,8 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
      groups: a numpy array containing true group membership.
      infered_groups: optional numpy array of size n by #groups. If score is n by 1, infered groups go here.
      truncated_logits: for performance reasons we truncate the logits to lie in [-10,10] by default. Change this here.
-     use_actual_groups: bool indicating if we should use actual or inferred groups to enforce fairness.
+     use_actual_groups: bool or 'single_threshold'. Indicates if we should use actual, inferred groups,
+                or a single global threshold for all datapoints, to enforce fairness.
      use_fast: True, False or 'hybrid' (hybrid is prefered for infered groups. Initialises the slow pathway
             with the output of the fast pathway). By default 'hybrid' unless use_actual_groups is true, in which
             case True
@@ -1031,11 +1033,11 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
         else:
             use_fast = 'hybrid'
     if use_actual_groups is True:
-        fpred = FairPredictor(capped_identity, val_data, threshold=0, use_fast=use_fast, logit_scaling=True)
+        fpred = FairPredictor(capped_identity, val_data, threshold=0, use_fast=use_fast, logit_scaling=logit_scaling)
     if use_actual_groups == 'single_threshold':
         fpred = FairPredictor(capped_identity, val_data, inferred_groups=single_threshold,
-                              threshold=0, use_fast=use_fast, logit_scaling=True)
+                              threshold=0, use_fast=use_fast, logit_scaling=False)
     else:
         fpred = FairPredictor(capped_identity, val_data, inferred_groups=group_fn, threshold=0,
-                              use_fast=use_fast, logit_scaling=True)
+                              use_fast=use_fast, logit_scaling=logit_scaling)
     return fpred

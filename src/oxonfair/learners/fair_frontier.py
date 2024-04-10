@@ -38,6 +38,35 @@ def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
     return score
 
 
+def compute_metrics(metrics: tuple[Callable], y_true: np.ndarray, proba: np.ndarray,
+                    threshold_assignment: np.ndarray,
+                    weights: np.ndarray) -> np.ndarray:
+    """takes probability scores, and offsets them according to the weights * threshold_assignment.
+        then select the max and compute a fairness metric """
+    scores = np.zeros((len(metrics), weights.shape[-1]))
+    y_true = np.asarray(y_true)
+    threshold_assignment = np.asarray(threshold_assignment)
+
+    pass_scores = [(isinstance(metric, ScorerRequiresContPred) or
+                   (AUTOGLUON_EXISTS and isinstance(metric, Scorer) and (metric.needs_pred is False)))
+                   for metric in metrics]
+    # Preallocate because this next loop is the system bottleneck
+    tmp = np.empty((threshold_assignment.shape[0], weights.shape[1]), dtype=threshold_assignment.dtype)
+    diff = np.empty(threshold_assignment.shape[0], dtype=threshold_assignment.dtype)
+    pred = np.empty(threshold_assignment.shape[0], dtype=int)
+    for i in range(weights.shape[-1]):
+        np.dot(threshold_assignment, weights[:, :, i], tmp)
+        tmp += proba
+        for j, metric in enumerate(metrics):
+            if pass_scores[j] is False:
+                np.argmax(tmp, -1, pred)
+                scores[j, i] = metric(y_true, pred)[0]
+            else:
+                np.subtract(tmp[:, 1], tmp[:, 0], diff)
+                scores[j, i] = metric(y_true, pred)
+    return scores
+
+
 def sort_by_front(front: np.ndarray, weights: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     "sort the front and weights according to front[0]"
     sort_ind = np.argsort(front[0])
@@ -47,7 +76,6 @@ def sort_by_front(front: np.ndarray, weights: np.ndarray) -> Tuple[np.ndarray, n
 
 # Solution modified from here:
 # https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
-
 
 
 def linear_interpolate(front: np.ndarray, weights: np.ndarray, gap=0.01) -> np.ndarray:
@@ -94,7 +122,7 @@ def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refine
             mins = sigmoid(mins)
         diffs = maxs - mins
         if logit_scaling:
-            epsilon = 0.05
+            epsilon = 0
         else:
             if any(diffs > 0):
                 epsilon = diffs[diffs > 0].min()
@@ -102,9 +130,7 @@ def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refine
                 epsilon = 0.05
         mins -= epsilon
         maxs += epsilon
-        if logit_scaling:
-            maxs = np.minimum(maxs, 1 - epsilon)
-            mins = np.maximum(mins, epsilon)
+
     else:
         epsilon = refinement_factor.flatten()
         mins -= epsilon * 1.5
@@ -158,8 +184,9 @@ def front_from_weights(weights: np.ndarray, y_true: np.ndarray, proba: np.ndarra
                        groups_infered: np.ndarray,
                        tupple_metrics) -> np.ndarray:
     """Computes the values of each metric from the weights"""
-    front = np.stack(list(map(lambda x: compute_metric(x, y_true, proba,
-                                                       groups_infered, weights), tupple_metrics)))
+    front = compute_metrics(tupple_metrics, y_true, proba, groups_infered, weights)
+    # front = np.stack(list(map(lambda x: compute_metric(x, y_true, proba,
+    #                                                   groups_infered, weights), tupple_metrics)))
     return front
 
 
