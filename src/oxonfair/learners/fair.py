@@ -1,5 +1,7 @@
 """The entry point to fair. Defines the FairPredictor object used to access fairness
 functionality."""
+from ast import Tuple
+from typing import Callable, Optional, Sequence
 import logging
 import numpy as np
 import pandas as pd
@@ -147,7 +149,7 @@ class FairPredictor:
             self.y_true = np.asarray(validation_labels)
         else:
             self.y_true = np.asarray(validation_labels == self.predictor.class_labels[1])
-        self.frontier = None
+        self.frontier: Optional[Tuple] = None
         if self.use_fast is True:
             self.offset = np.zeros((self._val_thresholds.shape[1],))
         else:
@@ -156,7 +158,7 @@ class FairPredictor:
         self.objective2 = None
         self.round = False
 
-    def _to_numpy(self, x, data, name='groups', none_replace=None) -> np.ndarray:
+    def _to_numpy(self, x, data, name='groups', none_replace=None) -> Optional[np.ndarray]:
         """helper function for transforming groups into a numpy array of unique values
         parameters
         ----------
@@ -783,7 +785,7 @@ def is_not_autogluon(predictor) -> bool:
     return True
 
 
-def call_or_get_proba(predictor, data):
+def call_or_get_proba(predictor, data) -> np.ndarray:
     """Internal helper function. Implicit dispatch depending on if predictor is callable
     or follows scikit-learn interface.
     Converts output to numpy array"""
@@ -794,7 +796,7 @@ def call_or_get_proba(predictor, data):
     return np.asarray(predictor.predict_proba(data))
 
 
-def _guard_predictor_data_match(data, predictor):
+def _guard_predictor_data_match(data, predictor) -> None:
     if (data is not None
         and is_not_autogluon(predictor)
         and not (isinstance(data, dict) and
@@ -831,7 +833,7 @@ def inferred_attribute_builder(train, target, protected, *args, **kwargs):
     return target_predictor, protected_predictor
 
 
-def fix_groups(metric: BaseGroupMetric, groups):
+def fix_groups(metric, groups):
     """fixes the choice of groups so that BaseGroupMetrics can be passed as Scorable analogs to the
     slow pathway.
 
@@ -905,7 +907,7 @@ def fix_groups_and_conditioning(metric, groups, conditioning_factor):
     return new_metric
 
 
-def dispatch_metric(metric, y_true, proba, groups, factor) -> np.ndarray:
+def dispatch_metric(metric, y_true, proba, groups, factor) -> float:
     """Helper function for making sure different types of Scorer and GroupMetrics get the right data
 
     Parameters
@@ -935,14 +937,14 @@ def dispatch_metric(metric, y_true, proba, groups, factor) -> np.ndarray:
         return np.nan
 
 
-def single_threshold(x):
+def single_threshold(x) -> np.ndarray:
     """A helper function. Allows you to measure and enforces fairness and performance measures
     by altering a single threshold for all groups.
     To use call FairPredictor with the argument infered_groups=single_threshold"""
     return np.zeros((x.shape[0], 1))
 
 
-def build_data_dict(target, data, groups=None, conditioning_factor=None):
+def build_data_dict(target, data, groups=None, conditioning_factor=None) -> dict:
     "Helper function that builds dictionaries for use with sklearn classifiers"
     assert target.shape[0] == data.shape[0]
     assert data.ndim == 2
@@ -960,7 +962,8 @@ def build_data_dict(target, data, groups=None, conditioning_factor=None):
     return out
 
 
-def build_deep_dict(target, score, groups, groups_inferred=None, *, conditioning_factor=None):
+def build_deep_dict(target, score, groups, groups_inferred=None, *,
+                    conditioning_factor=None) -> dict:
     """Wrapper around build_data_dict for deeplearning with inferred attributes.
      It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
@@ -988,7 +991,8 @@ def build_deep_dict(target, score, groups, groups_inferred=None, *, conditioning
 
 def DeepFairPredictor(target, score, groups, groups_inferred=None,
                       *, conditioning_factor=None, truncate_logits=15,
-                      use_actual_groups=False, use_fast=None, logit_scaling=False):
+                      use_actual_groups=False, use_fast=None,
+                      logit_scaling=False) -> FairPredictor:
     """Wrapper around FairPredictor for deeplearning with inferred attributes.
      It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.

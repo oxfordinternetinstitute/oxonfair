@@ -1,8 +1,9 @@
 """Implements efficient methods for fast computation of binary metrics"""
 import logging
-from typing import Callable, Tuple, List
+from typing import Callable, Tuple,  List, Sequence, Union
 import numpy as np
 from sklearn.preprocessing import OrdinalEncoder
+from ..utils.group_metric_classes import BaseGroupMetric
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +43,7 @@ def compute_metric(
 
 
 def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: np.ndarray,
-               additional_constraints: np.ndarray,
+               additional_constraints: Sequence,
                *, tol=1e-12) -> Tuple[np.ndarray, np.ndarray]:
     """Modified from
         https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
@@ -368,7 +369,7 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
     return score, indicies, front, index
 
 
-def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[Callable],
+def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupMetric],
                 hard_assignment: np.ndarray, true_groups: np.ndarray, *, directions=(+1, +1),
                 group_response=False, steps=25, factor=None,
                 additional_constraints=()) -> Tuple[np.ndarray, np.ndarray]:
@@ -450,11 +451,12 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[Callable],
                 return weight[mask]
             else:
                 return weight
-        weights = [mask_weight(w, masks) for w in weights]
+        new_weights = [mask_weight(w, masks) for w in weights]
         collate = [condense_weights(score[m], y_true[m], 2, true_groups[m], groups,
-                                    weights=weights) for m in masks]
+                                    weights=new_weights) for m in masks]
     thresholds = [c[0] for c in collate]
     ordered_encode = [c[1] for c in collate]
+    ordered_encode2: Union[bool, List]
     if unweighted_path:
         ordered_encode2 = False
     else:

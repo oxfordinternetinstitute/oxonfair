@@ -1,6 +1,6 @@
 """Slow pathway for computing fairness constraints. Compatable with Scorers and group metrics,
 while efficient_compute is only compatable with group metrics"""
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Sequence, Optional, Union
 import numpy as np
 from .efficient_compute import keep_front
 from ..utils.scipy_metrics_cont_wrapper import ScorerRequiresContPred
@@ -38,7 +38,7 @@ def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
     return score
 
 
-def compute_metrics(metrics: tuple[Callable], y_true: np.ndarray, proba: np.ndarray,
+def compute_metrics(metrics: Sequence[Callable], y_true: np.ndarray, proba: np.ndarray,
                     threshold_assignment: np.ndarray,
                     weights: np.ndarray) -> np.ndarray:
     """takes probability scores, and offsets them according to the weights * threshold_assignment.
@@ -78,7 +78,7 @@ def sort_by_front(front: np.ndarray, weights: np.ndarray) -> Tuple[np.ndarray, n
 # https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
 
 
-def linear_interpolate(front: np.ndarray, weights: np.ndarray, gap=0.01) -> np.ndarray:
+def linear_interpolate(front: np.ndarray, weights: np.ndarray, gap: float = 0.01) -> np.ndarray:
     """we want the points found to cover the frontier i.e. there should be no big gaps in w.
         we achieve this by linearly interpolating in the frontier, and using this to determine
         step size in w """
@@ -86,25 +86,25 @@ def linear_interpolate(front: np.ndarray, weights: np.ndarray, gap=0.01) -> np.n
     out = [np.linspace(weights[:, :, i], weights[:, :, i + 1],
                        num=int((np.abs(front[:, i + 1] - front[:, i]) / eps).max()) + 1)
            for i in range(weights.shape[-1] - 1)]
-    out = np.concatenate(out, 0).transpose(1, 2, 0)
-    return out
+    out_np = np.concatenate(out, 0).transpose(1, 2, 0)
+    return out_np
 
 
-def sigmoid(x):
+def sigmoid(x: np.ndarray) -> np.ndarray:
     "broadcastable sigmoid function"
     return 1.0 / (1.0 + np.exp(-x))
 
 
-def inv_sigmoid(x):
+def inv_sigmoid(x) -> np.ndarray:
     "broadcastable inverse sigmoid function"
     assert (x < 1).all()
     assert (x > 0).all()
     return np.log(x / (1 - x))
 
 
-def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refinement_factor=2,
-                             add_zero=False, use_linspace=True,
-                             logit_scaling=False) -> np.ndarray:
+def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, refinement_factor: Union[int, np.ndarray], *,
+                             add_zero: bool = False, use_linspace: bool = True,
+                             logit_scaling: bool = False) -> np.ndarray:
     """
     creates new grid points between two points by refining each axis in which the two points do not
     coincide; the refinement_factor defines into how many parts such an axis is divided
@@ -115,42 +115,10 @@ def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refine
     point_b = point_b .flatten()
     mins = np.minimum(point_a, point_b)
     maxs = np.maximum(point_a, point_b)
-
     if use_linspace:
-        if logit_scaling:
-            maxs = sigmoid(maxs)
-            mins = sigmoid(mins)
-        diffs = maxs - mins
-        if logit_scaling:
-            epsilon = 0
-        else:
-            if any(diffs > 0):
-                epsilon = diffs[diffs > 0].min()
-            else:
-                epsilon = 0.05
-        mins -= epsilon
-        maxs += epsilon
-
+        axx = make_grid_linspace(mins, maxs, logit_scaling, refinement_factor, add_zero)
     else:
-        epsilon = refinement_factor.flatten()
-        mins -= epsilon * 1.5
-        maxs += epsilon * 1.51
-
-    zero = np.zeros((1))
-    if logit_scaling:
-        zero = 0.5 * np.ones(1)
-    if use_linspace:
-        if logit_scaling:
-            axx = [inv_sigmoid(np.linspace(mins[i], maxs[i], num=refinement_factor + 1))
-                   for i in range(maxs.shape[0])]
-        else:
-            axx = [(np.linspace(mins[i], maxs[i], num=refinement_factor + 1))
-                   for i in range(maxs.shape[0])]
-    else:
-        axx = [np.arange(mins[i], maxs[i], step=epsilon[i]) for i in range(maxs.shape[0])]
-
-    if add_zero:
-        axx = [np.concatenate((ax, zero), 0) for ax in axx]
+        axx = make_grid_arange(mins, maxs, refinement_factor, add_zero)
 
     mesh = np.meshgrid(*axx, copy=False)
     shape = (groups, classes + 1) + mesh[0].shape
@@ -163,7 +131,49 @@ def make_grid_between_points(point_a: np.ndarray, point_b: np.ndarray, *, refine
     return weights
 
 
-def make_finer_grid(weights: np.ndarray, refinement_factor=2, use_linspace=True) -> np.ndarray:
+def make_grid_linspace(mins: np.ndarray, maxs: np.ndarray, logit_scaling: bool,
+                       refinement_factor: Union[int, np.ndarray], add_zero: bool) -> Sequence[np.ndarray]:
+    if logit_scaling:
+        maxs = sigmoid(maxs)
+        mins = sigmoid(mins)
+    diffs = maxs - mins
+    if logit_scaling:
+        epsilon = 0.0
+    else:
+        epsilon = 0.005
+        if any(diffs > 0):
+            epsilon = diffs[diffs > 0].min()
+    mins -= epsilon
+    maxs += epsilon
+    zero = np.zeros((1))
+    if logit_scaling:
+        zero = 0.5 * np.ones(1)
+        axx = [inv_sigmoid(np.linspace(mins[i], maxs[i], num=refinement_factor + 1))
+               for i in range(maxs.shape[0])]
+    else:
+        axx = [(np.linspace(mins[i], maxs[i], num=refinement_factor + 1))
+               for i in range(maxs.shape[0])]
+    if add_zero:
+        axx = [np.concatenate((ax, zero), 0) for ax in axx]
+    return axx
+
+
+def make_grid_arange(mins: np.ndarray, maxs: np.ndarray, refinement_factor: np.ndarray,
+                     add_zero: bool) -> Sequence[np.ndarray]:
+    epsilon = refinement_factor.flatten()
+    mins -= epsilon * 1.5
+    maxs += epsilon * 1.51
+    mins -= epsilon
+    maxs += epsilon
+    zero = np.zeros((1))
+    axx = [np.arange(mins[i], maxs[i], step=epsilon[i]) for i in range(maxs.shape[0])]
+    if add_zero:
+        axx = [np.concatenate((ax, zero), 0) for ax in axx]
+    return axx
+
+
+def make_finer_grid(weights: np.ndarray, refinement_factor: Union[int, np.ndarray] = 2,
+                    use_linspace: bool = True) -> np.ndarray:
     """
     creates additional grid points between two consecutive points in the current weights set; see
     the function make_grid_between_points below for the meaning of the refinement_factor
@@ -182,7 +192,7 @@ def make_finer_grid(weights: np.ndarray, refinement_factor=2, use_linspace=True)
 
 def front_from_weights(weights: np.ndarray, y_true: np.ndarray, proba: np.ndarray,
                        groups_infered: np.ndarray,
-                       tupple_metrics) -> np.ndarray:
+                       tupple_metrics: Sequence[Callable]) -> np.ndarray:
     """Computes the values of each metric from the weights"""
     front = compute_metrics(tupple_metrics, y_true, proba, groups_infered, weights)
     # front = np.stack(list(map(lambda x: compute_metric(x, y_true, proba,
@@ -190,18 +200,18 @@ def front_from_weights(weights: np.ndarray, y_true: np.ndarray, proba: np.ndarra
     return front
 
 
-def build_coarse_to_fine_front(metrics: Tuple[callable],
+def build_coarse_to_fine_front(metrics: Sequence[Callable],
                                y_true: np.ndarray,
                                proba: np.ndarray,
                                groups_infered: np.ndarray,
+                               directions: np.ndarray,
                                *,
-                               directions=(+1, +1),
-                               initial_divisions=15,
-                               nr_of_recursive_calls=5,
-                               refinement_factor=4,
-                               logit_scaling=False,
-                               existing_weights=None,
-                               additional_constraints=()) -> Tuple[np.ndarray, np.ndarray]:
+                               initial_divisions: int = 15,
+                               nr_of_recursive_calls: int = 5,
+                               refinement_factor: int = 4,
+                               logit_scaling: bool = False,
+                               existing_weights: Optional[np.ndarray] = None,
+                               additional_constraints: Sequence = None) -> Tuple[np.ndarray, np.ndarray]:
     """
     this function performs coarse-to-fine grid-search for computing the Pareto front
     """

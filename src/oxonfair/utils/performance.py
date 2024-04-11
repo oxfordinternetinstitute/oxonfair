@@ -154,7 +154,7 @@ def evaluate_per_group(target, prediction, groups, factor=None, *,
     return out
 
 
-def dispatch_metric(metric, y_true, proba, groups, factor, *, threshold) -> np.ndarray:
+def dispatch_metric(metric, y_true, proba, groups, factor, *, threshold) -> float:
     """Helper function for making sure different types of Scorer and GroupMetrics get the right data
 
     Parameters
