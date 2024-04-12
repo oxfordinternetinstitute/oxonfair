@@ -74,6 +74,21 @@ def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
     fpredictor.evaluate_groups(test_dict)
 
 
+def test_fit_creates_updated(use_fast=True):
+    """eval should return 'updated' iff fit has been called"""
+    fpredictor = FairPredictor(predictor, val_dict, use_fast=use_fast)
+    assert 'updated' not in fpredictor.evaluate().columns
+    fpredictor.fit(gm.accuracy, gm.recall, 0)  # constraint is intentionally slack
+    assert 'updated' in fpredictor.evaluate().columns
+
+
+def test_fit_creates_updated_slow():
+    test_fit_creates_updated(False)
+
+
+def test_fit_creates_updated_hybrid():
+    test_fit_creates_updated('hybrid')
+
 def test_base_with_groups():
     'Test base functionality holds when groups are provided'
     test_base_functionality(val_dict_g, test_dict_g)

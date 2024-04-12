@@ -573,7 +573,7 @@ class FairPredictor:
                                          metrics=metrics, verbose=verbose, threshold=0)
         collect.columns = ['original']
 
-        if np.any(self.offset):
+        if self.frontier is not None:
             y_pred_proba = np.asarray(self.predict_proba(data))
             score = y_pred_proba[:, 1]-y_pred_proba[:, 0]
             new_pd = perf.evaluate_fairness(labels, score, groups, factor,
