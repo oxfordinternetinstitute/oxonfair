@@ -74,6 +74,8 @@ mcc = GroupMetric(
     / ge1(np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))),
     "MCC",
 )
+bias_amplification = GroupMetric(lambda TP, FP, FN, TN: np.abs(FN - FP)/(TP + FP + FN + TN), 'Bias amplification', False)
+#a metric based on the delta a_t term from directional bias amplification - https://proceedings.mlr.press/v139/wang21t/wang21t.pdf 
 
 default_accuracy_metrics = {
     "accuracy": accuracy,
