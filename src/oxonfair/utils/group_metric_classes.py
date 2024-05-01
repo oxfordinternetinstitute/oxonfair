@@ -149,7 +149,7 @@ class GroupMin(BaseGroupMetric):
         return val.min(-1)
 
 
-class GroupDiff(BaseGroupMetric):
+class GroupMaxDiff(BaseGroupMetric):
     "Helper class for reporting maximal difference in score between any pair of groups"
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
@@ -158,7 +158,7 @@ class GroupDiff(BaseGroupMetric):
         return val.max(-1) - val.min(-1)
 
 
-class GroupAvDiff(BaseGroupMetric):
+class GroupDiff(BaseGroupMetric):
     "Helper class for reporting average difference in score between all pairs of groups"
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
@@ -250,13 +250,13 @@ class GroupMetric(BaseGroupMetric):
         )
         self.diff: GroupDiff = GroupDiff(
             func,
-            "Maximal Group Difference in " + name,
+            "Average Group Difference in " + name,
             greater_is_better=False,
             cond_weights=cond_weights,
         )
-        self.av_diff: GroupAvDiff = GroupAvDiff(
+        self.max_diff: GroupMaxDiff = GroupMaxDiff(
             func,
-            "Average Group Difference in " + name,
+            "Maximal Group Difference in " + name,
             greater_is_better=False,
             cond_weights=cond_weights,
         )
