@@ -149,7 +149,7 @@ class GroupMin(BaseGroupMetric):
         return val.min(-1)
 
 
-class GroupDiff(BaseGroupMetric):
+class GroupMaxDiff(BaseGroupMetric):
     "Helper class for reporting maximal difference in score between any pair of groups"
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
@@ -158,7 +158,7 @@ class GroupDiff(BaseGroupMetric):
         return val.max(-1) - val.min(-1)
 
 
-class GroupAvDiff(BaseGroupMetric):
+class GroupDiff(BaseGroupMetric):
     "Helper class for reporting average difference in score between all pairs of groups"
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
@@ -171,12 +171,23 @@ class GroupAvDiff(BaseGroupMetric):
 
 
 class GroupRatio(BaseGroupMetric):
+    "Helper class for reporting average score ratio  between any pair of groups"
+
+    def __call__(self, *args: np.ndarray) -> np.ndarray:
+        array = self.build_array(args)
+        val = self.func(*array)
+        broadcast = val[:, np.newaxis, :] / np.maximum(1e-12, val[:, :, np.newaxis])
+        trunc = np.minimum(broadcast, 1.0/np.maximum(1e-12, broadcast))
+        collate = (trunc.sum(1).sum(1)-trunc.shape[1]) / (val.shape[1] * (val.shape[1] - 1))
+        return collate
+
+class GroupMinimalRatio(BaseGroupMetric):
     "Helper class for reporting minimal score ratio  between any pair of groups"
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
         array = self.build_array(args)
         val = self.func(*array)
-        return val.min(-1) / np.maximum(1e-12,val.max(-1))
+        return val.min(-1) / np.maximum(1e-12, val.max(-1))
 
 
 class Overall(BaseGroupMetric):
@@ -250,17 +261,23 @@ class GroupMetric(BaseGroupMetric):
         )
         self.diff: GroupDiff = GroupDiff(
             func,
-            "Maximal Group Difference in " + name,
-            greater_is_better=False,
-            cond_weights=cond_weights,
-        )
-        self.av_diff: GroupAvDiff = GroupAvDiff(
-            func,
             "Average Group Difference in " + name,
             greater_is_better=False,
             cond_weights=cond_weights,
         )
+        self.max_diff: GroupMaxDiff = GroupMaxDiff(
+            func,
+            "Maximal Group Difference in " + name,
+            greater_is_better=False,
+            cond_weights=cond_weights,
+        )
         self.ratio: GroupRatio = GroupRatio(
+            func,
+            "Average Group Ratio in " + name,
+            greater_is_better=True,
+            cond_weights=cond_weights,
+        )
+        self.min_ratio: GroupMinimalRatio = GroupMinimalRatio(
             func,
             "Minimal Group Ratio in " + name,
             greater_is_better=True,
