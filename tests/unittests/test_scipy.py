@@ -74,6 +74,20 @@ def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
     fpredictor.evaluate_groups(test_dict)
 
 
+def test_conflict_groups():
+    """When we overwrite existing groups calling fair predictor this should preserve metrics when they match,
+    and otherwise alter them"""
+    fpred = FairPredictor(predictor, val_dict_g)
+    fpred2 = FairPredictor(predictor, val_dict_g, 'sex_ Female')
+    fpred3 = FairPredictor(predictor, val_dict_g, 'race_ White')
+
+    assert (fpred.evaluate_fairness() == fpred2.evaluate_fairness()).all().all()
+    assert (fpred2.evaluate_fairness() == fpred2.evaluate_fairness(val_dict_g)).all().all()
+    assert (fpred3.evaluate_fairness() == fpred3.evaluate_fairness(val_dict_g)).all().all()
+
+    assert (fpred2.evaluate_fairness() != fpred3.evaluate_fairness(val_dict_g)).any().any()
+
+
 def test_fit_creates_updated(use_fast=True):
     """eval should return 'updated' iff fit has been called"""
     fpredictor = FairPredictor(predictor, val_dict, use_fast=use_fast)

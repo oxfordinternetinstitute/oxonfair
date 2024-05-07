@@ -110,17 +110,17 @@ class FairPredictor:
                 # Do not update self.groups otherwise this will stick
             else:
                 if validation_data.get('groups', None) is not None:
-                    logger.warning("""Groups passed twice to fairpredictor both as part of
-                                   the dataset and as an argument.
-                                   The argument will be used.""")
+                    logger.warning(("Groups passed twice to fairpredictor both as part of "
+                                    "the dataset and as an argument. "
+                                    "The argument will be used."))
             if conditioning_factor is False:
                 conditioning_factor = validation_data.get('cond_fact', False)
                 # Do not update self.conditioning otherwise this will stick
             else:
                 if validation_data.get('cond_fact', False) is not False:
-                    logger.warning("""Conditioning factor passed twice to fairpredictor both as
-                                   part of the dataset and as an argument.
-                                   The argument will be used.""")
+                    logger.warning(("Conditioning factor passed twice to fairpredictor both as "
+                                    "part of the dataset and as an argument. "
+                                    "The argument will be used."))
         else:
             self.validation_data = validation_data
             validation_labels = self.validation_data[predictor.label]
@@ -170,10 +170,10 @@ class FairPredictor:
         """
         if data is None:
             data = self.validation_data
-        if x is None and isinstance(data, dict):
-            x = data.get(name, None)
         if x is None:
             x = none_replace
+        if x is None and isinstance(data, dict):
+            x = data.get(name, None)
         if isinstance(data, dict):
             data = data['data']
         if x is False:
