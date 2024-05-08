@@ -69,7 +69,7 @@ class partition:
             resample = self.resample
 
         total_data, target, positive_target = self.get_data()
-        target = np.asarray(target).reshape(-1)
+
         if callable(groups):
             groups = groups(total_data)
 
