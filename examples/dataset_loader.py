@@ -69,7 +69,6 @@ class partition:
             resample = self.resample
 
         total_data, target, positive_target = self.get_data()
-        target = np.asarray(target).reshape(-1)
         if callable(groups):
             groups = groups(total_data)
 
@@ -77,10 +76,11 @@ class partition:
             t_name = target
             target = total_data[target]
             total_data = total_data.drop(t_name, axis=1)
+        target = np.asarray(target).reshape(-1)
         if positive_target:
             target = target == positive_target
 
-        assert 0 < np.asarray(target).mean() < 1
+        assert 0 < target.mean() < 1, 'Something is wrong with the dataset. Every target value is the same.'
 
         if isinstance(groups, str):
             g_name = groups

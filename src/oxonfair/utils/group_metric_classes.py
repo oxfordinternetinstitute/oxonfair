@@ -86,9 +86,7 @@ class BaseGroupMetric:
         else:
             weights = False
 
-        if not y_true.size == y_pred.size == groups.size:
-            logger.error("Inputs to group_metric are of different sizes.")
-            assert y_true.size == y_pred.size == groups.size
+        assert y_true.size == y_pred.size == groups.size, "Inputs to group_metric are of different sizes. Make sure that all variables are ordinal encoded and not one-hot."
         t_pos = y_true * y_pred
         f_pos = (1 - y_true) * y_pred
         f_neg = y_true * (1 - y_pred)
