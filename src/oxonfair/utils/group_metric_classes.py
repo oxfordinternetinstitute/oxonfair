@@ -179,6 +179,7 @@ class GroupRatio(BaseGroupMetric):
         collate = (trunc.sum(1).sum(1)-trunc.shape[1]) / (val.shape[1] * (val.shape[1] - 1))
         return collate
 
+
 class GroupMinimalRatio(BaseGroupMetric):
     "Helper class for reporting minimal score ratio  between any pair of groups"
 
