@@ -261,12 +261,14 @@ def condense_weights(thresholds: np.ndarray, labels: np.ndarray, lmax: int, grou
     2. two corresponding counts
     """
     assert thresholds.shape == labels.shape == groups.shape
+    for w in weights:
+        if isinstance(w, np.ndarray):
+            assert w.shape == thresholds.shape
     groups = groups.astype(int)
     labels = labels.astype(int)
     unique_thresh, index = np.unique(thresholds, return_inverse=True)
-    out = np.empty(len(weights))
+    out = np.zeros((len(weights), unique_thresh.shape[0], lmax, gmax))
     for i in range(len(weights)):
-        out[i] = np.zeros((unique_thresh.shape[0], lmax, gmax))
         np.add.at(out[i], (index, labels, groups), weights[i])
         out[i] = out[i][::-1]
 
@@ -350,7 +352,7 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
     # now for the computational bottleneck
     bottom = np.zeros(groups)
     top = np.asarray([s.shape[0] for s in ordered_encode])
-    score, mesh_indices, step = build_grid2(accum_count1, accum_count2, bottom, top, metrics,
+    score, mesh_indices, step = build_grid2((accum_count1, accum_count2), bottom, top, metrics,
                                             steps=steps)
 
     indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(groups, -1)
@@ -362,7 +364,7 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
         tindex = index
     bottom = np.floor(np.maximum(step / 2, tindex.min(1) - step))
     top = np.ceil(np.minimum(top, tindex.max(1) + step))
-    score, mesh_indices, _ = build_grid2(accum_count1, accum_count2, bottom, top, metrics,
+    score, mesh_indices, _ = build_grid2((accum_count1, accum_count2), bottom, top, metrics,
                                          steps=steps)
 
     indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(groups, -1)
@@ -441,7 +443,7 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupM
     else:
         assert factor is not None, 'Called fit with conditional metrics but no conditional factor provided'
         # Consider disabling this and just use weight=1 if no factor provided
-        weights = np.ones(len(metrics), dtype=object)
+        weights = [1,] * len(metrics)
         for i, met in enumerate(metrics):
             if met.cond_weights is not None:
                 weights[i] = met.cond_weights(factor, true_groups, y_true)
@@ -451,16 +453,16 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupM
                 return weight[mask]
             else:
                 return weight
-        new_weights = [mask_weight(w, masks) for w in weights]
         collate = [condense_weights(score[m], y_true[m], 2, true_groups[m], groups,
-                                    weights=new_weights) for m in masks]
+                                    weights=[mask_weight(w, m) for w in weights]) for m in masks]
     thresholds = [c[0] for c in collate]
-    ordered_encode = [c[1] for c in collate]
     ordered_encode2: Union[bool, List]
     if unweighted_path:
+        ordered_encode = [c[1] for c in collate]
         ordered_encode2 = False
     else:
-        ordered_encode2 = [c[1] for c in collate]
+        ordered_encode = [c[1][0] for c in collate]
+        ordered_encode2 = [c[1][1] for c in collate]
 
     thresholds = [np.concatenate((t[0:1] + 1e-4, t), 0) for t in thresholds]
     # add threshold above maximum value

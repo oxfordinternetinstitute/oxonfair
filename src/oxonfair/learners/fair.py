@@ -1,7 +1,7 @@
 """The entry point to fair. Defines the FairPredictor object used to access fairness
 functionality."""
 from ast import Tuple
-from typing import Callable, Optional, Sequence
+from typing import Optional
 import logging
 import numpy as np
 import pandas as pd
@@ -170,10 +170,13 @@ class FairPredictor:
         """
         if data is None:
             data = self.validation_data
-        if x is None:
+        if x is None and isinstance(none_replace, str):
             x = none_replace
         if x is None and isinstance(data, dict):
             x = data.get(name, None)
+        if x is None:
+            x = none_replace
+
         if isinstance(data, dict):
             data = data['data']
         if x is False:
@@ -211,7 +214,14 @@ class FairPredictor:
         -------
         numpy array
         """
-        return self._to_numpy(fact, data, 'cond_fact', self.conditioning_factor)
+        out = self._to_numpy(fact, data, 'cond_fact', self.conditioning_factor)
+        # conditioning factor may be arbitary unique values like groups,
+        if out is None:
+            return out
+        from sklearn.preprocessing import OrdinalEncoder
+        encoder = OrdinalEncoder()
+        out = encoder.fit_transform(out.reshape(-1, 1))
+        return out.reshape(-1)
 
     def infered_to_hard(self, infered):
         "Map the output of infered groups into a hard assignment for use in the fast pathway"
@@ -365,7 +375,7 @@ class FairPredictor:
                                                  self.infered_to_hard(self._val_thresholds),
                                                  self._internal_groups,
                                                  steps=min(30, (30**5)**(1 / self._val_thresholds.shape[1])),
-                                                 directions=direction,
+                                                 directions=direction, factor=factor,
                                                  additional_constraints=values)
 
         if self.use_fast == 'hybrid':
@@ -872,7 +882,8 @@ def fix_conditioning(metric: BaseGroupMetric, conditioning_factor):
     a function that takes y_true and y_pred as an input.
 
         todo: return scorable"""
-    if metric.cond_weights is None:
+    if (isinstance(metric, ScorerRequiresContPred) or
+       (AUTOGLUON_EXISTS and isinstance(metric, Scorer)) or metric.cond_weights is None):
         logger.warning("Fixing conditoning factor on a metric that doesn't use it.")
         return metric
     conditioning_factor = np.asarray(conditioning_factor)
@@ -896,7 +907,8 @@ def fix_groups_and_conditioning(metric, groups, conditioning_factor):
     a function that takes y_true and y_pred as an input.
 
         todo: return scorable"""
-    if metric.cond_weights is None:
+    if (isinstance(metric, ScorerRequiresContPred) or
+       (AUTOGLUON_EXISTS and isinstance(metric, Scorer)) or metric.cond_weights is None):
         return fix_groups(metric, groups)
 
     conditioning_factor = np.asarray(conditioning_factor)

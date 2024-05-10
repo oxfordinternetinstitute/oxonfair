@@ -6,13 +6,13 @@ from oxonfair.utils import conditional_group_metrics as cgm
 
 try:
     from autogluon.tabular import TabularDataset, TabularPredictor
-    AUTOGLUON_EXISTS=True
+    AUTOGLUON_EXISTS = True
     train_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv")
     test_data = TabularDataset("https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv")
     predictor = TabularPredictor(label="class").fit(train_data=train_data, time_limit=3)
     new_test = test_data[~test_data["race"].isin([" Other", " Asian-Pac-Islander"])]
 except ModuleNotFoundError:
-    AUTOGLUON_EXISTS=False
+    AUTOGLUON_EXISTS = False
 # drop other
 
 
@@ -100,9 +100,8 @@ def test_class(use_fast=True):
     if not AUTOGLUON_EXISTS:
         return
     "check base functionality is there"
-    fpredictor = fair.FairPredictor(
-        predictor, test_data, "sex", conditioning_factor="race", use_fast=use_fast
-    )
+    fpredictor = fair.FairPredictor(predictor, test_data,
+                                    "sex", conditioning_factor="race", use_fast=use_fast)
     fpredictor.fit(gm.accuracy, gm.demographic_parity, 0.02)
     fpredictor.fit(gm.balanced_accuracy, cgm.pos_pred_rate.diff, 0.02)
     fpredictor.plot_frontier()
