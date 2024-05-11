@@ -115,3 +115,8 @@ def test_class(use_fast=True):
 def test_class_slow():
     "check slow pathway"
     test_class(False)
+
+
+def test_class_hybrid():
+    "check hybrid pathway"
+    test_class('hybrid')

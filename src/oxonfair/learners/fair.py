@@ -953,7 +953,7 @@ def single_threshold(x) -> np.ndarray:
     """A helper function. Allows you to measure and enforces fairness and performance measures
     by altering a single threshold for all groups.
     To use call FairPredictor with the argument infered_groups=single_threshold"""
-    return np.zeros((x.shape[0], 1))
+    return np.ones((x.shape[0], 1))
 
 
 def build_data_dict(target, data, groups=None, conditioning_factor=None) -> dict:
@@ -1013,8 +1013,8 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
             and is a concatination of the logit output with the inferered groups.
      groups: a numpy array containing true group membership.
      infered_groups: optional numpy array of size n by #groups. If score is n by 1, infered groups go here.
-     truncated_logits: for performance reasons we truncate the logits to lie in [-10,10] by default. Change this here.
-     use_actual_groups: bool or 'single_threshold'. Indicates if we should use actual, inferred groups,
+     truncated_logits: for performance reasons we truncate the logits to lie in [-15,15] by default. Change this here.
+     use_actual_groups: bool or 'single_threshold'. Indicates if we should use actual groups, inferred groups,
                 or a single global threshold for all datapoints, to enforce fairness.
      use_fast: True, False or 'hybrid' (hybrid is prefered for infered groups. Initialises the slow pathway
             with the output of the fast pathway). By default 'hybrid' unless use_actual_groups is true, in which
@@ -1027,6 +1027,7 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
 
     def mult_group(array):
         return array[:, 1:]
+
     if groups_inferred:
         if groups_inferred.shape[1] == 1:
             group_fn = square_align
