@@ -164,7 +164,7 @@ class LitTwoHead(L.LightningModule):
         pred = self.model(x)
         loss = total_loss(y, pred)
         self.my_logging(loss, y, pred)
-        self.log('val_loss', loss) # Log the validation loss
+        self.log('val_loss', loss)  # Log the validation loss
         accuracy_targets_val = ((pred[:, 0] <= 0) == (y[:, target_class] <= 0)).type(torch.float32).mean()
         self.log('accuracy_targets_val', accuracy_targets_val)
 
