@@ -103,6 +103,7 @@ def test_fit_creates_updated_slow():
 def test_fit_creates_updated_hybrid():
     test_fit_creates_updated('hybrid')
 
+
 def test_base_with_groups():
     'Test base functionality holds when groups are provided'
     test_base_functionality(val_dict_g, test_dict_g)
@@ -214,7 +215,7 @@ def test_disp_impact(use_fast=True):
     )
     fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.9)
 
-    measures = fpredictor.evaluate_fairness(verbose=False)
+    measures = fpredictor.evaluate_fairness(metrics=gm.clarify_metrics, verbose=False)
 
     assert measures["original"]["disparate_impact"] < 0.9
 

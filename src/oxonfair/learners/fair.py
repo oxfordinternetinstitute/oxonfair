@@ -62,14 +62,14 @@ class FairPredictor:
         This is useful for infered groups in deep networks.
         If use_fast is False, autogluon and scikitlearn scorers are also supported.
     conditioning_factor (optional, default None) Used to specify the factor conditional metrics
-    are conditioned on.
-    Takes the same form as groups.
-    Threshold (optional, default 2/3) used in use_fast pathway. Adds an extra catagory of uncertain
-    group when infering attributes.
-    If a datapoint has no response from the inferred_groups classifier above the threshold
-    then it is assigned to the uncertain group. Tuning this value may help improve
-    fairness/performance trade-offs.
-    When set to 0 it is off.
+        are conditioned on.
+        Takes the same form as groups.
+    threshold (optional, default 2/3) used in use_fast pathway. Adds an extra catagory of uncertain
+        group when infering attributes.
+        If a datapoint has no response from the inferred_groups classifier above the threshold
+        then it is assigned to the uncertain group. Tuning this value may help improve
+        fairness/performance trade-offs.
+        When set to 0 it is off.
     """
 
     def __init__(self, predictor, validation_data, groups=None, *, inferred_groups=False,
@@ -562,7 +562,7 @@ class FairPredictor:
         _guard_predictor_data_match(data, self.predictor)
         factor = self.cond_fact_to_numpy(factor, data)
         if metrics is None:
-            metrics = group_metrics.clarify_metrics
+            metrics = group_metrics.default_fairness_measures
 
         if data is None:
             data = self.validation_data

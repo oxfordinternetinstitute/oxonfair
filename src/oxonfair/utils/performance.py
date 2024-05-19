@@ -78,7 +78,7 @@ def evaluate_fairness(target, prediction, groups, factor=None, *,
         groups = np.ones_like(target)
 
     if metrics is None:
-        metrics = group_metrics.clarify_metrics
+        metrics = group_metrics.default_fairness_measures
 
     values = np.zeros(len(metrics))
     names = []

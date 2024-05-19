@@ -199,7 +199,7 @@ def build_grid2(accum_counts: Tuple[np.ndarray], bottom, top, metrics: Tuple[Cal
         2. the indicies corresponding to thresholds
         3. the step offset used.
     """
-    groups = len(bottom)
+    groups = accum_counts[0][0].shape[-1]
 
     step = [(t - b) / steps for t, b in zip(top, bottom)]
 
