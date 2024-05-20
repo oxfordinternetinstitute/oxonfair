@@ -136,18 +136,18 @@ gen_entropy = GroupMetric(
     False,
 )
 clarify_metrics = {
-    "class_imbalance": class_imbalance,
+    #"class_imbalance": class_imbalance,
     "demographic_parity": demographic_parity,
     "disparate_impact": disparate_impact,
+    "cond_accept.diff": cond_accept.diff,
+    "cond_reject.diff": cond_reject.diff,
     "accuracy.diff": accuracy.diff,
     "recall.diff": recall.diff,
-    "cond_accept.diff": cond_accept.diff,
     "acceptance_rate.diff": acceptance_rate.diff,
     "specificity.diff": specificity.diff,
-    "cond_reject.diff": cond_reject.diff,
     "rejection_rate.diff": rejection_rate.diff,
     "treatment_equality": treatment_equality,
-    "gen_entropy": gen_entropy,
+    #gen_entropy": gen_entropy,
 }
 
 
@@ -171,11 +171,11 @@ accuracy_parity = accuracy.diff.clone("Accuracy Parity")
 verma_metrics = {
     "statistical_parity": statistical_parity,
     "predictive_parity": predictive_parity,
-    "false_pos_rate.diff": false_pos_rate.diff,
-    "false_neg_rate.diff": false_neg_rate.diff,
+    "recall.diff": equal_opportunity,
+    "miss_rate.diff": false_neg_rate.diff,
     "equalized_odds": equalized_odds,
     "cond_use_accuracy": cond_use_accuracy,
-    "predictive_equality": predictive_equality,
+    # "predictive_equality": predictive_equality,
     "accuracy.diff": accuracy.diff,
     "treatment_equality": treatment_equality,
 }
@@ -184,3 +184,5 @@ rate_metrics = {
     "pos_pred_rate": pos_pred_rate.diff,
     **{k: v.diff for k, v in standard_metrics.items()},
 }
+
+default_fairness_measures = verma_metrics

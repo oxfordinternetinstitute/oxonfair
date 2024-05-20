@@ -87,11 +87,15 @@ class partition:
 
         if isinstance(groups, str):
             g_name = groups
-            groups = total_data[groups]
             if replace_groups:
-                groups = groups.replace(replace_groups)
+                total_data[groups] = total_data[groups].replace(replace_groups)
+            groups = total_data[groups]
             if discard_groups:
                 total_data = total_data.drop(g_name, axis=1)
+        else:
+            if replace_groups:
+                groups = groups.replace(replace_groups)
+
         if resample:
             mask = resample(groups, target)
             total_data = total_data[mask]
@@ -138,6 +142,12 @@ def compas_raw():
     all_data = pd.read_csv('https://github.com/propublica/compas-analysis/raw/master/compas-scores-two-years.csv')
     condensed_data = all_data[['sex', 'race', 'age', 'juv_fel_count', 'juv_misd_count', 'juv_other_count',
                                'priors_count', 'age_cat', 'c_charge_degree', 'two_year_recid']].copy()
+    return condensed_data, 'two_year_recid', None
+
+def compas_audit_raw():
+    all_data = pd.read_csv('https://github.com/propublica/compas-analysis/raw/master/compas-scores-two-years.csv')
+    condensed_data = all_data[['sex', 'race', 'age', 'juv_fel_count', 'juv_misd_count', 'juv_other_count',
+                               'priors_count', 'age_cat', 'c_charge_degree', 'decile_score.1','v_score_text' 'two_year_recid']].copy()
     return condensed_data, 'two_year_recid', None
 
 
@@ -201,6 +211,7 @@ myocardial_infarction_raw = UCI_raw(579, fix_X=replace_nan, fix_y=lambda y: y['L
 
 adult = partition(adult_raw, 'sex')
 compas = partition(compas_raw, 'race')
+compas_audit = partition(compas_audit_raw, 'race')
 diabetes = partition(diabetes_raw, 'Sex')
 support2 = partition(support2_raw, 'sex')
 german = partition(german_raw, german_sex)
