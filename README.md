@@ -1,6 +1,6 @@
 # OxonFair: An Algorithmic Fairness Toolkit for High-Capacity Models
 This is a toolkit designed to enforce a wide-range of fairness definitions and to customize binary classifier behavior.
-The toolkit is much more expressive than existing approaches and designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
+The toolkit is more expressive than existing approaches and designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 
 For low capacity models (e.g. linear regression, and decision-trees of limited depth), we recomend [fairlearn](https://github.com/fairlearn/fairlearn).
 
