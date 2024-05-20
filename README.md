@@ -17,7 +17,9 @@ To install from source.
     pip install -e .
 
 Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
+
 For scikit learn see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
+
 For pytorch see the [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
 ### Example usage
 
