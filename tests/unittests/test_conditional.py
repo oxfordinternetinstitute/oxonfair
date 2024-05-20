@@ -56,7 +56,7 @@ def make_rows(department, gender, accept, count):
 
 def test_conditional_is_consistent():
     "Check that the numbers match those reported in statistics"
-    condensed = pd.read_csv("benchmark/Berkeley.tsv", sep="\t")
+    condensed = pd.read_csv("tests/Berkeley.tsv", sep="\t")
     collect = list()
     for idx in range(6):
         collect.append(
