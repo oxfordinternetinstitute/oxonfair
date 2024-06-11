@@ -33,7 +33,8 @@ parser.add_argument("--limit_train_batches", type=int, default=1000, help="Limit
 parser.add_argument("--limit_val_batches", type=custom_type, default=False, help="Limit validation batches during training.")
 parser.add_argument("--max_epochs", type=int, default=20, help="Maximum number of epochs.")
 parser.add_argument("--scaling_factor", type=float, default=0.5, help="Scaling factor on second head")
-parser.add_argument("--backbone", type=str, default="mobilenetv3", choices=["mobilenetv3", "resnet18", "resnet50"], help="Backbone architecture for the model.")
+parser.add_argument("--backbone", type=str, default="mobilenetv3", choices=["mobilenetv3", "resnet18", "resnet50"],
+                    help="Backbone architecture for the model.")
 
 args = parser.parse_args()
 
@@ -176,7 +177,8 @@ if __name__ == "__main__":
     val_loader = utils.data.DataLoader(celeba_val, batch_size=32, num_workers=9, persistent_workers=True)
     test_loader = utils.data.DataLoader(celeba_test, batch_size=32, num_workers=9, persistent_workers=True)
 
-    output_folder = get_all_celeba_attributes()[target_class] + '_' + get_all_celeba_attributes()[protected_class] + '_' + str(args.backbone) + '_prototyping'
+    output_folder = (get_all_celeba_attributes()[target_class] + '_' + get_all_celeba_attributes()[protected_class]
+                     + '_' + str(args.backbone) + '_prototyping')
 
     os.makedirs(output_folder, exist_ok=True)
 

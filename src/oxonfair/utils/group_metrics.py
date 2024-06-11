@@ -3,7 +3,7 @@
 import numpy as np
 
 from .scipy_metrics_cont_wrapper import roc_auc, average_precision, ScorerRequiresContPred  # noqa: F401
-from .group_metric_classes import (
+from .group_metric_classes import ( # pylint: disable=unused-import # noqa
     GroupMetric,
     AddGroupMetrics,
     Utility)  # noqa: F401
@@ -74,8 +74,11 @@ mcc = GroupMetric(
     / ge1(np.sqrt((TP + FP) * (TP + FN) * (TN + FP) * (TN + FN))),
     "MCC",
 )
-bias_amplification = GroupMetric(lambda TP, FP, FN, TN: np.abs(FN - FP)/(TP + FP + FN + TN), 'Bias amplification', False)
-# a metric based on the delta a_t term from directional bias amplification - https://proceedings.mlr.press/v139/wang21t/wang21t.pdf 
+
+bias_amplification = GroupMetric(lambda TP, FP, FN, TN: np.abs(FN - FP)/(TP + FP + FN + TN),
+                                 'Bias amplification', False)
+# absolute metric based on the delta a_t term from directional bias amplification
+# see: https://proceedings.mlr.press/v139/wang21t/wang21t.pdf
 
 default_accuracy_metrics = {
     "accuracy": accuracy,
@@ -96,7 +99,7 @@ standard_metrics = {
 ag_metrics = {**default_accuracy_metrics, **additional_ag_metrics}
 
 count_metrics = {
-    "count": count,
+    #   "count": count,
     "pos_data_count": pos_data_count,
     "neg_data_count": neg_data_count,
     "pos_data_rate": pos_data_rate,
@@ -136,7 +139,7 @@ gen_entropy = GroupMetric(
     False,
 )
 clarify_metrics = {
-    #"class_imbalance": class_imbalance,
+    # "class_imbalance": class_imbalance,
     "demographic_parity": demographic_parity,
     "disparate_impact": disparate_impact,
     "cond_accept.diff": cond_accept.diff,
@@ -147,7 +150,7 @@ clarify_metrics = {
     "specificity.diff": specificity.diff,
     "rejection_rate.diff": rejection_rate.diff,
     "treatment_equality": treatment_equality,
-    #gen_entropy": gen_entropy,
+    # gen_entropy": gen_entropy,
 }
 
 

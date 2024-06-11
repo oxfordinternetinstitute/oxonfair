@@ -324,6 +324,8 @@ def test_recall_diff_inferred(use_fast=True):
 
     fpredictor.evaluate_groups(new_train)
     # No test needed, code just has to run with sex dropped
+    # predict should also work when run on raw data
+    fpredictor.predict(new_train['data'])
 
 
 def test_recall_diff_inferred_slow():

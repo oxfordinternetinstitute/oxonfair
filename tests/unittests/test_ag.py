@@ -9,7 +9,7 @@ try:
 
 except ModuleNotFoundError:
     print('Autogluon not installed')
-    
+
 import oxonfair as fair
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
@@ -131,7 +131,7 @@ def test_disp_impact(use_fast=True):
     fpredictor = fair.FairPredictor(predictor, new_test, "race", use_fast=use_fast)
     fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.8)
 
-    measures = fpredictor.evaluate_fairness(metrics=gm.clarify_metrics,verbose=False)
+    measures = fpredictor.evaluate_fairness(metrics=gm.clarify_metrics, verbose=False)
 
     assert measures["original"]["disparate_impact"] < 0.8
 

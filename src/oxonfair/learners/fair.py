@@ -287,8 +287,8 @@ class FairPredictor:
             mask = self.frontier[0][1] <= value
 
         if mask.sum() == 0:
-            logger.warning("""No solutions satisfy the constraint found, selecting the
-                           closest solution""")
+            logger.warning("No solutions satisfy the constraint found, selecting the" +
+                           "closest solution")
             weights = self.frontier[1]
             vmax = [self.frontier[0][1].argmin(),
                     self.frontier[0][1].argmax()][int(greater_is_better_const)]
@@ -703,7 +703,7 @@ class FairPredictor:
         a  pandas array of scores. Note, these scores are not probabilities, and not guarenteed to
         be non-negative or to sum to 1.
         """
-        if self.groups is None:
+        if self.groups is None and self.inferred_groups is False:
             _guard_predictor_data_match(data, self.predictor)
         if self.groups is None and isinstance(data, dict):
             groups = data.get('groups', False)

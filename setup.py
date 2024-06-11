@@ -107,7 +107,8 @@ install_requires = [
 
 extras_require = dict()
 
-test_requirements = ["tox", "pytest", "pytest-cov"]
+test_requirements = ["tox", "pytest", "pytest-cov", 'autogluon', 'sklearn',
+                     'matplotlib', 'flake8', 'linkcheckmd', 'ucimlrepo', 'fairlearn']
 
 test_requirements = list(set(test_requirements))
 extras_require["tests"] = test_requirements
@@ -120,4 +121,3 @@ if __name__ == "__main__":
         extras_require=extras_require,
         **setup_args,
     )
-
