@@ -1,4 +1,5 @@
 # OxonFair: An Algorithmic Fairness Toolkit for High-Capacity Models
+
 OxonFair is an expressive toolkit designed to enforce a wide-range of fairness definitions and to customize binary classifier behavior.
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 It is designed and works for computer vision and NLP problems alongside tabular data.
@@ -30,13 +31,13 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
 
     # Load libraries
     from oxonfair import dataset_loader, FairPredictor
-	from oxonfair import group_metrics as gm
-	import xgboost
+    from oxonfair import group_metrics as gm
+    import xgboost
 
     # Download and partition the adult dataset into training and test datta
-	train_data, _, test_data = dataset_loader.adult('sex', train_ratio=0.7, test_ratio=0.3)
+    train_data, _, test_data = dataset_loader.adult('sex', train_ratio=0.7, test_ratio=0.3)
     # Train an XGBoost classifier on the training set                                              
-	predictor = xgboost.XGBClassifier().fit(X=train_data['data'], y=train_data['target'])
+    predictor = xgboost.XGBClassifier().fit(X=train_data['data'], y=train_data['target'])
 
     # Specify that we want to create a fair predictor by reusing the training set
     # (at the risk of overfitting) to enforce fairness with respect to sex.
@@ -77,9 +78,9 @@ The full set of constraints and objectives can be seen in the list of measures i
 
 ### Why Another Fairness Library?
 
-Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. This classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g. when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punatively slow when training the model once might take days, or even weeks, if you are trying to maximise performance. 
+Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. This classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g. when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punatively slow when training the model once might take days, or even weeks, if you are trying to maximise performance.
 
-At the same time, postprocessing methods which allow you to train once, and then improve fairness on held-out validation data generally requires the protected attributes to be avalible at test time, which is often infeasible, particularly with computer vision. 
+At the same time, postprocessing methods which allow you to train once, and then improve fairness on held-out validation data generally requires the protected attributes to be avalible at test time, which is often infeasible, particularly with computer vision.
 
 OxonFair is build from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use infered attributes where protected attributes are not avalible to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g. scikit-learn or xgboost, with infered attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
 
@@ -95,7 +96,7 @@ Unlike other approaches to fairness, FairPredictor allows the optimization of ar
 
 Rather than offering a range of different fairness methods that enforce a small number of fairness definitions through a variety of different methods, we offer one method that can enforce a much wider range of fairness definitions out of the box, alongside support for custom fairness definitions.
 
-Of the set of decision-based group-metrics  discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify]([https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-measure-post-training-bias.html](https://pages.awscloud.com/rs/112-TZM-766/images/Fairness.Measures.for.Machine.Learning.in.Finance.pdf)), out of the box FairPredictor offers the ability to both measure and enforce all of the 8 group metrics used to evaluate classifier decision measured in Verma and Rubin, and all 12 group measures used to evaluate dcisions in Clarify.
+Of the set of decision-based group-metrics  discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify](https://pages.awscloud.com/rs/112-TZM-766/images/Fairness.Measures.for.Machine.Learning.in.Finance.pdf), out of the box FairPredictor offers the ability to both measure and enforce all of the 8 group metrics used to evaluate classifier decision measured in Verma and Rubin, and all 12 group measures used to evaluate dcisions in Clarify.
 
 ##### Direct Remedy of Harms
 
@@ -212,127 +213,7 @@ This allows for the easy training of two tabular classifiers, one called `predic
 
 We demonstrate how to enforce a wide range of fairness definitions on the COMPAS dataset. This dataset records paroles caught violating the terms of parole. As it measures who was caught, it is strongly influenced by policing and environmental biases, and should not be confused with a measurement of who actually violated their terms of parole. See [this paper](https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/file/92cc227532d17e56e07902b254dfad10-Paper-round1.pdf) for a discussion of its limitations and caveats.
 
-We use it because it is a standard fairness dataset that captures such strong differences in outcome between people identified as African-American and everyone else, that classifiers trained on this dataset violate most definitions of fairness.
-
-As many of the ethnic groups are too small for reliable statistical estimation, we only consider differences is in outcomes between African-Americans vs. everyone else (labeled as other).
-We load and preprocess the COMPAS dataset, splitting it into three roughly equal partitions of train, validation, and test:
-
-    import pandas as pd
-    import   numpy   as   np
-    from oxonfair import FairPredictor, inferred_attribute_builder
-    from oxonfair.utils import group_metrics as gm
-    all_data = pd.read_csv('https://github.com/propublica/compas-analysis/raw/master/compas-scores-two-years.csv')
-    condensed_data=all_data[['sex','race','age', 'juv_fel_count', 'juv_misd_count', 'juv_other_count', 'priors_count', 'age_cat', 'c_charge_degree','two_year_recid']].copy()
-    condensed_data.replace({'Caucasian':'Other', 'Hispanic':'Other', 'Native American':'Other', 'Asian':'Other'},inplace=True)
-    train=condensed_data.sample(frac=0.3, random_state=0)
-    val_and_test=condensed_data.drop(train.index)
-    val=val_and_test.sample(frac=0.5, random_state=0)
-    test=val_and_test.drop(val.index)
-
-To enforce fairness constraints without access to protected attributes at test time, we train two classifiers to infer the 2-year recidivism rate, and ethnicity.
-
-    predictor2, protected = inferred_attribute_builder(train, 'two_year_recid', 'race')
-
-From these a single predictor that maximizes accuracy while reducing the demographic parity violation to less than 2.5% can be trained by running:
-
-    fpredictor=FairPredictor(predictor2, val, 'race', protected)
-    fpredictor.fit(gm.accuracy, gm.demographic_parity, 0.025)
-
-However, instead we will show how a family of fairness measures can be individually optimized. First, we consider the measures of Sagemaker Clarify that we support. The following code plots a table showing the change in accuracy and the fairness measure on a held-out test set as we decrease the fairness measure to less than 0.025 (on validation) for all measures except for disparate impact which we raise to above 0.975.
-We define a helper function for evaluation:
-
-    def evaluate(fpredictor,use_metrics):
-        "Print a table showing the accuracy drop that comes with enforcing fairness"
-        extra_metrics= {**use_metrics, 'accuracy':gm.accuracy}
-        collect=pd.DataFrame(columns=['Measure (original)', 'Measure (updated)', 'Accuracy (original)', 'Accuracy (updated)'])
-        for d in use_metrics.items():
-            if d[1].greater_is_better is False:
-                fpredictor.fit(gm.accuracy, d[1], 0.025)
-            else:
-                fpredictor.fit(gm.accuracy, d[1], 1-0.025)
-            tmp=fpredictor.evaluate_fairness(test, metrics=extra_metrics)
-            collect.loc[d[1].name]=np.concatenate((np.asarray(tmp.loc[d[0]]), np.asarray(tmp.loc['accuracy'])), 0)
-        print(collect.to_markdown(())
-
-We can now contrast the behavior of a fair classifier that relies on access to the protected attribute at test time with one that infers it.
-
-    # we first create a classifier using the protected attribute
-    predictor=TabularPredictor(label='two_year_recid').fit(train_data=train)
-
-    fpredictor = FairPredictor(predictor, val, 'race', )
-
-    evaluate(fpredictor, gm.clarify_metrics)
-
-This returns the following table, which shows little drop in accuracy compared to the original and in some cases, even an improvement. N.B. Class Imbalance is a property of the dataset and cannot be updated.
-
-|                                                         |   Measure (original) |   Measure (updated) |   Accuracy (original) |   Accuracy (updated) |
-|:--------------------------------------------------------|---------------------:|--------------------:|----------------------:|---------------------:|
-| Class Imbalance                                         |            0.132203  |          0.132203   |              0.666139 |             0.663762 |
-| Demographic Parity                                      |            0.283466  |          0.0328274  |              0.666139 |             0.659406 |
-| Disparate Impact                                        |            0.514436  |          0.951021   |              0.666139 |             0.677228 |
-| Maximal Group Difference in Accuracy                    |            0.0469919 |          0.0532531  |              0.666139 |             0.663762 |
-| Maximal Group Difference in Recall                      |            0.236378  |          0.00533019 |              0.666139 |             0.67604  |
-| Maximal Group Difference in Conditional Acceptance Rate |            0.380171  |          0.0555107  |              0.666139 |             0.670099 |
-| Maximal Group Difference in Acceptance Rate             |            0.0202594 |          0.0438892  |              0.666139 |             0.658614 |
-| Maximal Group Difference in Specificity                 |            0.251729  |          0.0831756  |              0.666139 |             0.664158 |
-| Maximal Group Difference in Conditional Rejectance Rate |            0.29054   |          0.0107142  |              0.666139 |             0.670891 |
-| Maximal Group Difference in Rejection Rate              |            0.0620499 |          0.0743351  |              0.666139 |             0.663762 |
-| Treatment Equality                                      |            0.933566  |          0.159398   |              0.666139 |             0.66099  |
-| Generalized Entropy                                     |            0.16627   |          0.0508368  |              0.666139 |             0.442376 |
-
-In contrast, even though the base classifiers have similar accuracy, when using inferred attributes (N.B. the base classifier is not directly trained to maximize accuracy, which is why it can have higher accuracy when it doesn't use race), we see a much greater drop in accuracy as fairness is enforced which is consistent with [Lipton et al.](https://arxiv.org/pdf/1711.07076.pdf)
-
-    # Now using the inferred attributes
-
-    fpredictor2 = FairPredictor(predictor2, val, 'race', inferred_groups=protected)
-
-    evaluate(fpredictor2, gm.clarify_metrics)
-
-|                                                         |   Measure (original) |   Measure (updated) |   Accuracy (original) |   Accuracy (updated) |
-|:--------------------------------------------------------|---------------------:|--------------------:|----------------------:|---------------------:|
-| Class Imbalance                                         |            0.132203  |          0.132203   |              0.672871 |             0.666535 |
-| Demographic Parity                                      |            0.21792   |          0.0344565  |              0.672871 |             0.584158 |
-| Disparate Impact                                        |            0.512905  |          0.863017   |              0.672871 |             0.563564 |
-| Maximal Group Difference in Accuracy                    |            0.0147268 |          0.00976726 |              0.672871 |             0.666535 |
-| Maximal Group Difference in Recall                      |            0.231539  |          0.121319   |              0.672871 |             0.583762 |
-| Maximal Group Difference in Conditional Acceptance Rate |            0.500941  |          0.00282887 |              0.672871 |             0.601188 |
-| Maximal Group Difference in Acceptance Rate             |            0.0723272 |          0.145199   |              0.672871 |             0.585347 |
-| Maximal Group Difference in Specificity                 |            0.139306  |          0.0397364  |              0.672871 |             0.593663 |
-| Maximal Group Difference in Conditional Rejectance Rate |            0.080529  |          0.00827387 |              0.672871 |             0.662574 |
-| Maximal Group Difference in Rejection Rate              |            0.0548552 |          0.0556917  |              0.672871 |             0.666535 |
-| Treatment Equality                                      |            0.32195   |          0.0277123  |              0.672871 |             0.590099 |
-| Generalized Entropy                                     |            0.196436  |          0.0508368  |              0.672871 |             0.442376 |
-
-Similar results can be obtained using the metrics of Verma and Rubin, by running
-
-    evaluate(fpredictor, gm.verma_metrics)
-
-|                                                 |   Measure (original) |   Measure (updated) |   Accuracy (original) |   Accuracy (updated) |
-|:------------------------------------------------|---------------------:|--------------------:|----------------------:|---------------------:|
-| Statistical Parity                              |            0.283466  |           0.0328274 |              0.666139 |             0.659406 |
-| Predictive Parity                               |            0.0202594 |           0.0438892 |              0.666139 |             0.658614 |
-| Maximal Group Difference in False Positive Rate |            0.251729  |           0.0775969 |              0.666139 |             0.667723 |
-| Maximal Group Difference in False Negative Rate |            0.236378  |           0.0421043 |              0.666139 |             0.674455 |
-| Equalized Odds                                  |            0.244053  |           0.0106539 |              0.666139 |             0.673663 |
-| Conditional Use Accuracy                        |            0.0411546 |           0.0468682 |              0.666139 |             0.668119 |
-| Predictive Equality                             |            0.236378  |           0.0421043 |              0.666139 |             0.674455 |
-| Maximal Group Difference in Accuracy            |            0.0469919 |           0.0532531 |              0.666139 |             0.663762 |
-| Treatment Equality                              |            0.933566  |           0.159398  |              0.666139 |             0.66099  |
-
-and
-
-    evaluate(fpredictor2, gm.verma_metrics)
-|                                                 |   Measure (original) |   Measure (updated) |   Accuracy (original) |   Accuracy (updated) |
-|:------------------------------------------------|---------------------:|--------------------:|----------------------:|---------------------:|
-| Statistical Parity                              |            0.21792   |          0.0344565  |              0.672871 |             0.584158 |
-| Predictive Parity                               |            0.0723272 |          0.145199   |              0.672871 |             0.585347 |
-| Maximal Group Difference in False Positive Rate |            0.139306  |          0.0397364  |              0.672871 |             0.593663 |
-| Maximal Group Difference in False Negative Rate |            0.231539  |          0.108081   |              0.672871 |             0.582574 |
-| Equalized Odds                                  |            0.185422  |          0.0309648  |              0.672871 |             0.586535 |
-| Conditional Use Accuracy                        |            0.0635912 |          0.0632338  |              0.672871 |             0.627723 |
-| Predictive Equality                             |            0.231539  |          0.108081   |              0.672871 |             0.582574 |
-| Maximal Group Difference in Accuracy            |            0.0147268 |          0.00976726 |              0.672871 |             0.666535 |
-| Treatment Equality                              |            0.32195   |          0.0277123  |              0.672871 |             0.590099 |
+See this [notebook](./examples/compas_autogluon.ipynb) for details.
 
 ### Best Practices
 
