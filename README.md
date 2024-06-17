@@ -12,17 +12,19 @@ It is a modified version of [autogluon.fair](https://github.com/autogluon/autogl
 ## Source install
 
 To install from source.
- 1.  (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
- 2.  (Minimal Alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>)
+
+ 1. (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
+ 2. (Minimal Alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>) or XGboost (see <https://xgboost.readthedocs.io/en/stable/install.html>)
  3. Download the source of oxonfair and in the source directory run:
     pip install -e .
 
 Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
 
-For scikit learn see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
+For scikit/XGBoost learn see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
 
-For pytorch see the [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
-More demo notebooks are present in the [examples folder](./examples/README.md). 
+For pytorch see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this  [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
+
+More demo notebooks are present in the [examples folder](./examples/README.md).
 
 ## Demo using XGBoost
 
