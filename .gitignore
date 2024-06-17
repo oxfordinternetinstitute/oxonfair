@@ -129,7 +129,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-/.vscode
+
+#VS code project settings
+.vscode/
 
 #Mac Preview
 .DS_Store
