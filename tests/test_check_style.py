@@ -1,7 +1,8 @@
 import logging
 import warnings
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, check_call
 import linkcheckmd as lc
+import glob
 
 
 def test_check_style_codebase():
@@ -57,5 +58,10 @@ def test_md_links():
     assert missing_links == []
 
 
-#def test_run_notebooks_without_errors():
-#    Popen('pytest' '--nbmake', '--overwrite', '-n=auto', 'examples',)
+def test_run_notebooks_without_errors():
+    from ipynbcompress import compress
+    check_call(['pytest', '--nbmake', '--overwrite', '-n=auto', '--timeout=500', 'examples'])
+    # Now compress notebooks because running test makes them too large
+    # This is not really a test, hijacking the test suite to build.
+    for file in glob.glob('./examples/*.ipynb'):
+        compress(file)
