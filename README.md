@@ -31,11 +31,9 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
 	import xgboost
 
     # Download and partition the adult dataset into training and test datta
-	train_data, _, test_data = dataset_loader.adult('sex',train_ratio=0.7,
-												  test_ratio=0.3)
+	train_data, _, test_data = dataset_loader.adult('sex', train_ratio=0.7, test_ratio=0.3)
     # Train an XGBoost classifier on the training set                                              
-	predictor = xgboost.XGBClassifier().fit(X=train_data['data'],
-										   y=train_data['target'])
+	predictor = xgboost.XGBClassifier().fit(X=train_data['data'], y=train_data['target'])
 
     # Specify that we want to create a fair predictor by reusing the training set
     # (at the risk of overfitting) to enforce fairness with respect to sex.
@@ -91,7 +89,7 @@ Unlike other approaches to fairness, FairPredictor allows the optimization of ar
 
 Rather than offering a range of different fairness methods that enforce a small number of fairness definitions through a variety of different methods, we offer one method that can enforce a much wider range of fairness definitions out of the box, alongside support for custom fairness definitions.
 
-Of the set of decision-based group-metrics  discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify](https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-measure-post-training-bias.html), out of the box FairPredictor offers the ability to both measure and enforce all of the 8 metrics used to evaluate classifier decision measured in Verma and Rubin, and 12 of the 12 measures used in Clarify.
+Of the set of decision-based group-metrics  discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify]([https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-measure-post-training-bias.html](https://pages.awscloud.com/rs/112-TZM-766/images/Fairness.Measures.for.Machine.Learning.in.Finance.pdf)), out of the box FairPredictor offers the ability to both measure and enforce all of the 8 group metrics used to evaluate classifier decision measured in Verma and Rubin, and all 12 group measures used to evaluate dcisions in Clarify.
 
 ##### Direct Remedy of Harms
 
