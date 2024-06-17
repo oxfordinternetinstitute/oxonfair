@@ -2,7 +2,7 @@
 
 Here we show a simple example of enforcing fairness on a random forest classifier.
 
-While the basic approach is the same as for autogluon:
+The basic approach is the same as for [autogluon](./autogluon.md):
 
 1. Fit a predictor.
 2. Create a fairpredictor object using the predictor
@@ -43,29 +43,30 @@ Step 1 requires considerably more preamble when using sklearn.
     val_dict = fair.build_data_dict(val_target,val_data)
     test_dict = fair.build_data_dict(test_target, test_data) 
 
-### Train a classifier
+## Train a classifier
 
     pred = RandomForestClassifier().fit(train_data, train_target)
 
-### Create a fair object
+## Create a fair object
+
 and prepare to enforce and evaluate fairness with respect to the variable `sex_ Female`.
 
     fpred = fair.FairPredictor(pred,val_dict,'sex_ Female')
 
-### Fit the object
+## Fit the object
 
 Here we call fit to maximise accuracy while ensuring that the difference in recall between the groups is less than 2%.
 A wide range of possible performance metrics and fairness measures are suported.
 
     fpred.fit(gm.accuracy,gm.recall.diff,0.02)
 
-### We can now visualise the space of possible trade-offs
+We can now visualise the space of possible trade-offs
 
     fpred.plot_frontier()
 
 ![frontier](./sklearn_frontier.png)
 
-### And evaluate on a range of harms both on the validation set where it was enforced, and on the test set
+And evaluate on a range of harms both on the validation set where it was enforced, and on the test set
 
     fpred.evaluate_groups()
 

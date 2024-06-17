@@ -56,8 +56,8 @@ class partition:
         train_proportion: number between 0 and 1 expressing the proportion of the dataset used for training
         test_proportion: as above but for test
         seed: random seed used to make results deterministic
-        discard_groups: if True drop groups from the data 
-        replace_groups: A dict used to merge small groups e.g. 
+        discard_groups: if True drop groups from the data
+        replace_groups: A dict used to merge small groups e.g.
                     {'Hispanic':'Other', 'Native American':'Other', 'Asian':'Other'}
         encoding: if 'ordinal' or 'onehot' encode data accordingly. If None don't encode.
         resample: override existing resampling. This should be a Resample class.
@@ -144,10 +144,12 @@ def compas_raw():
                                'priors_count', 'age_cat', 'c_charge_degree', 'two_year_recid']].copy()
     return condensed_data, 'two_year_recid', None
 
+
 def compas_audit_raw():
     all_data = pd.read_csv('https://github.com/propublica/compas-analysis/raw/master/compas-scores-two-years.csv')
     condensed_data = all_data[['sex', 'race', 'age', 'juv_fel_count', 'juv_misd_count', 'juv_other_count',
-                               'priors_count', 'age_cat', 'c_charge_degree', 'decile_score.1','v_score_text' 'two_year_recid']].copy()
+                               'priors_count', 'age_cat', 'c_charge_degree', 'decile_score.1',
+                               'v_score_text' 'two_year_recid']].copy()
     return condensed_data, 'two_year_recid', None
 
 

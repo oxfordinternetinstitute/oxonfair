@@ -6,7 +6,6 @@ documentation, we greatly value feedback and contributions from our community.
 Please read through this document before submitting any issues or pull requests to ensure we have all the necessary
 information to effectively respond to your bug report or contribution.
 
-
 ## Reporting Bugs/Feature Requests
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.
@@ -45,7 +44,7 @@ GitHub provides additional document on [forking a repository](https://help.githu
 - We recommend developing on Linux when using autogluon as this is the only OS where all features are currently 100% functional. Avoid introducing changes that will only work on a particular OS.
 
 
-- Please try to avoid introducing additional dependencies on 3rd party packages. We are currently working to reduce the number of external dependencies of our package. For now, we recommend [lazy-import](https://github.com/autogluon/autogluon/blob/master/core/src/autogluon/core/utils/try_import.py) of external package if you are adding functionality that you believe will only be used by small fraction users.
+- Please try to avoid introducing additional dependencies on 3rd party packages. We are currently working to reduce the number of external dependencies of our package.
 
 - All code should adhere to the [PEP8 style](https://www.python.org/dev/peps/pep-0008/).
 
@@ -61,7 +60,7 @@ Or remove the ::test_mytest suffix to run all tests in the file:
 python3 -m pytest path_to_file
 ```
 
-- To otherwise test your code changes, we recommend running AutoGluon on multiple datasets and verifying the code runs correctly and the resulting accuracy of the trained models is not harmed by your change.  One easy way to test is to simply modify the scripts in `examples/`.
+- To otherwise test your code changes, we recommend running OxonFair on multiple datasets and verifying the code runs correctly and the resulting accuracy of the trained models is not harmed by your change.  One easy way to test is to simply modify the scripts in `examples/`.
 
 - Remember to update all existing examples/tutorials/documentation affected by your code changes.
 
