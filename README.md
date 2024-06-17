@@ -19,6 +19,9 @@ To install from source.
  3. Download the source of oxonfair and in the source directory run:
     pip install -e .
 
+To install every single dependency used for testing [autogluon, maplotlib, xgboost, and a range of helper functions] use:
+    pip install  -e . \[tests\]
+
 Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
 
 For scikit/XGBoost learn see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
