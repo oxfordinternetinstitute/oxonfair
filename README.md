@@ -10,17 +10,42 @@ We support a range of complex classifiers including [pytorch](https://pytorch.or
 
 It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
+Compared to autogluon.fair:
+We support:
+
+    * scikit-learn, xgboost, and pytorch (for image and NLP tasks)
+    * a broader range of fairness measures, including conditional metrics.
+    * improved performance on tabular data
+
 ## Source install
 
-To install from source.
+### Standard install
 
- 1. (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
- 2. (Minimal Alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>) or XGboost (see <https://xgboost.readthedocs.io/en/stable/install.html>)
- 3. Download the source of oxonfair and in the source directory run:
+Download the source of oxonfair and in the source directory run:
+
+    pip install -e .\[full\]
+
+This will download and install enough code to run any notebooks except those comparing with fairlearn.
+
+### Compare with Fairlearn
+
+Download the source of oxonfair and in the source directory run:
+
+    pip install -e .\[notebooks\]
+
+This will download enough supporting libraries to run all the notebooks.
+
+### Minimal install
+
+Download the source of oxonfair and in the source directory run:
     pip install -e .
 
-To install every single dependency used for testing [autogluon, maplotlib, xgboost, and a range of helper functions] use:
-    pip install  -e . \[tests\]
+By default this will only install the necissary dependencies sklearn; pandas; and numpy. You will not be able to load datasets, without install `ucimlrepo`, and will have to install `matplotlib` to plot.
+
+### Full install for running the test suite
+
+Download the source of oxonfair and in the source directory run:
+    pip install -e .\[tests\]
 
 Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
 

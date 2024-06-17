@@ -104,16 +104,22 @@ version = "0.2"
 install_requires = [
     "numpy>=1.21.4",
     "pandas>=1.2.5",
+    "scikit-learn"
 ]
 
 extras_require = dict()
+full_requirements = ['matplotlib', 'autogluon.tabular', 'ucimlrepo', 'torch']
+notebook_requirements = full_requirements + ['fairlearn']
+test_requirements = notebook_requirements + ["tox", "pytest", "pytest-cov", 'flake8',
+                                             'linkcheckmd', 'ipynbcompress']
 
-test_requirements = ["tox", "pytest", "pytest-cov", 'autogluon.tabular', 'scikit-learn',
-                     'matplotlib', 'flake8', 'ucimlrepo', 'fairlearn',
-                     'linkcheckmd', 'ipynbcompress', 'torch']
-
+full_requirements = list(set(full_requirements))
+notebook_requirements = list(set(notebook_requirements))
 test_requirements = list(set(test_requirements))
+extras_require['full'] = full_requirements
+extras_require['notebooks'] = notebook_requirements
 extras_require["tests"] = test_requirements
+
 
 if __name__ == "__main__":
     create_version_file(version=version)

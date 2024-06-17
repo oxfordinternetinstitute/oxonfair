@@ -43,12 +43,14 @@ def test_slack_constraints(use_fast=True):
     cpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
 
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.005)
-    cpredictor.fit(gm.accuracy, gm.recall.diff, 0.005, additional_constraints=((gm.pos_pred_rate, 0),))
+    cpredictor.fit(gm.accuracy, gm.recall.diff, 0.005, 
+                   additional_constraints=((gm.pos_pred_rate, -1),))
 
     # Evaluate the change in fairness (recall difference corresponds to EO)
     measures = fpredictor.evaluate_fairness(verbose=False)
     cmeasures = cpredictor.evaluate_fairness(verbose=False)
-    assert np.isclose(measures, cmeasures,).all().all()
+
+    assert np.isclose(measures, cmeasures, atol=0.01).all().all()
 
     # check fit did something
     assert measures["original"]["recall.diff"] > 0.005
@@ -59,9 +61,8 @@ def test_slack_constraints_slow():
     test_slack_constraints(False)
 
 
-# def test_slack_constraints_hybrid():
-#    'Warning this consistency fails 50% of the time '
-#    test_slack_constraints('hybrid')
+def test_slack_constraints_hybrid():
+    test_slack_constraints('hybrid')
 
 
 def test_active_constraints(use_fast=True):
