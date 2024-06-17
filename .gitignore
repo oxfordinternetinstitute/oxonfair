@@ -5,6 +5,8 @@ __pycache__/
 
 # C extensions
 *.so
+# Autogluon files
+AutogluonModels/
 
 # Distribution / packaging
 .Python
@@ -128,3 +130,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 /.vscode
+
+#Mac Preview
+.DS_Store
