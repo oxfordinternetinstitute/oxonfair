@@ -23,6 +23,5 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Unit Tests
         run: |
-          python3 -m pip install -e .
-          python3 -m pip install pytest
+          python3 -m pip install -e .\[tests\]
           python3 -m pytest tests/unittests
