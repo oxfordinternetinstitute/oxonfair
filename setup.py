@@ -108,9 +108,9 @@ install_requires = [
 
 extras_require = dict()
 
-test_requirements = ["tox", "pytest", "pytest-cov", 'autogluon', 'scikit-learn',
-                     'matplotlib', 'flake8', 'linkcheckmd', 'ucimlrepo', 'fairlearn',
-                     'linkcheckmd', 'ipynbcompress', 'pytorch']
+test_requirements = ["tox", "pytest", "pytest-cov", 'autogluon.tabular', 'scikit-learn',
+                     'matplotlib', 'flake8', 'ucimlrepo', 'fairlearn',
+                     'linkcheckmd', 'ipynbcompress', 'torch']
 
 test_requirements = list(set(test_requirements))
 extras_require["tests"] = test_requirements
