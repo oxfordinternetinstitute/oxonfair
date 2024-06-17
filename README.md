@@ -9,7 +9,7 @@ We support a range of complex classifiers including, [pytorch](www.) ensembles p
 
 It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
-### Source install
+## Source install
 
 To install from source.
  1.  (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
@@ -24,6 +24,7 @@ Check out [using_fit.md](./using_fit.md) to get a feel for the range of tasks th
 More demo notebooks are present in the [examples folder](./examples/README.md). 
 
 ## Demo using XGBoost
+
     # Load libraries
     from oxonfair import dataset_loader, FairPredictor
 	from oxonfair import group_metrics as gm
@@ -331,9 +332,9 @@ and
 
 ### Best Practices
 
-It is common for machine learning algorithms to overfit training data. Therefore, if you want your fairness constraints to carry over to unseen data we recommend that they are enforced on a large validation set, rather than the training set. For low-dimensional datasets, Autogluon predictors are robust to overfitting and fairness constraints enforced on training data carry over to unseen test data. In fact, given the choice between enforcing fairness constraints on a large training set, vs. using a significantly smaller validation set, reusing the training set will often result in better generalization of the desired behavior to unseen data. However, this behavior is not guaranteed, and should always be empirically validated.
+It is common for machine learning algorithms to overfit training data. Therefore, if you want your fairness constraints to carry over to unseen data we recommend that they are enforced on a large validation set, rather than the training set. For low-dimensional datasets, many classifiers, with a careful choice of hyperparameter,  are robust to overfitting and fairness constraints enforced on training data can carry over to unseen test data. In fact, given the choice between enforcing fairness constraints on a large training set, vs. using a significantly smaller validation set, reusing the training set may result in better generalization of the desired behavior to unseen data. However, this behavior is not guaranteed, and should always be empirically validated.
 
-#### Challenges with unbalanced data.
+#### Challenges with unbalanced data
 
 Many datasets are unbalanced both in the size of protected groups and in the prevalence of positive or negatively labeled data. When a rare group rarely receives positives outcomes, large datasets are needed to correctly estimate the rate of failure per group on positive data. This can make it very hard to reliably enforce or evaluate measures such as equal opportunity or minimum recall on unbalanced datasets, particularly where the baseline classifier has relatively high accuracy. The size and nature of the dataset needs to be carefully considered when choosing a fairness metric.
 
@@ -345,125 +346,4 @@ For this reason, reliably guaranteeing high-accuracy across all groups, or that 
 
 ### List of Measures
 
-The remainder of the document lists the standard measures provided by the group_metrics library, which is imported as:
-
-    from oxonfair.utils import group_metrics as gm
-
-#### Basic Structure
-
-The majority of measures are defined as GroupMetrics or sub-objects of GroupMetrics.
-
-A group measure is specified by a function that takes the number of True Positives, False Positives, False Negatives, and True Negatives and returns a score; A string specifying the name of the of the measure; and optionally a bool indicating if greater values are better than smaller ones. For example, accuracy is defined as:
-
-    accuracy = gm.GroupMetric(lambda TP, FP, FN, TN: (TP + TN) / (TP + FP + FN + TN), 'Accuracy')
-
-For efficiency, our approach relies on broadcast semantics and all operations in the function must be applicable to numpy arrays.
-
-Having defined a GroupMetric it can be called in two ways. Either:
-
-    accuracy(target_labels, predictions, groups)
-
-Here target_labels and predictions are binary vectors corresponding to either the target ground-truth values, or the predictions made by a classifier, with 1 representing the positive label and 0 otherwise. Groups is simply a vector of values where each unique value is assumed to correspond to a distinct group.
-
-The other way it can be called is by passing it a single 3D array of dimension 4 by number of groups by k, where k is the number of candidate classifiers that the measure should be computed over.
-
-As a convenience, GroupMetrics automatically implements a range of functionality as sub-objects.
-
-Having defined a metric as above, we have a range of different objects:
-
-* `metric.diff` reports the average absolute difference of the method between groups.
-* `metric.average` reports the average of the method taken over all groups.
-* `metric.max_diff` reports the maximum difference of the method between any pair of groups.
-* `metric.max` reports the maximum value for any group.
-* `metric.min` reports the minimum value for any group.
-* `metric.overall` reports the overall value for all groups combined, and is the same as calling `metric` directly
-* `metric.ratio` reports the average ratio over pairs of distinct groups, where smallest value is divided by the largest
-* `metric.per_group` reports the value for every group.
-
-These can be passed directly to fit, or to the evaluation functions we provide.
-
-The vast majority of fairness metrics are implemented as a `.diff` of a standard performance measure, and by placing a `.min` after any measure such as `recall` or `precision` it is possible to add constraints that enforce that the precision or recall is above a particular value for every group.
-gm.
-
-#### Dataset Measures
-
-| Name             | Definition                                                       |
-|------------------|------------------------------------------------------------------|
-| `gm.count`          | Total number of points in a dataset or group                     |
-| `gm.pos_data_count` | Total number of positively labeled points in a dataset or group |
-| `gm.neg_data_count` | Total number of negatively labeled points in a dataset or group |
-| `gm.pos_data_rate`  | Ratio of positively labeled points to size of the group         |
-| `gm.neg_data_rate`  | Ratio of negatively labeled points to size of the group         |
-
-#### Standard Prediction Measures
-
-| Name             | Definition                                                                                                     |
-|------------------|----------------------------------------------------------------------------------------------------------------|
-| `gm.pos_pred_rate`  | Positive Prediction Rate: Ratio of the number of positively predicted points to the size of the group          |
-| `gm.neg_pred_rate`  | Negative Prediction Rate: Ratio of the number of negatively predicted points to the size of the group          |
-| `gm.true_pos_rate`  | True Positive Rate: Ratio of true positives divided by total positive predictions                              |
-| `gm.true_neg_rate`  | True Negative Rate: Ratio of true negatives divided by total negative predictions                              |
-| `gm.false_pos_rate` | False Positive Rate: Ratio of False Positives divided by total negative prediction                             |
-| `gm.false_neg_rate` | False Negative Rate: Ratio of False Negatives divided by total positive predictions                            |
-| `gm.pos_pred_val`   | Positive Predicted Value': Ratio of True Positives divided by the total number of points with positive label   |
-| `gm.neg_pred_val`   | Negative Predicted Value': Ratio of True Negatives divided by the total number of points with a negative label |
-
-#### Core Performance Measures
-
-| Name                | Definition                                                                                                                                                                               |
-|---------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `gm.accuracy`          | Proportion of points correctly identified                                                                                                                                                 |
-| `gm.balanced_accuracy` | The average of the proportion of points with a positive label correctly identified and the proportion of points with a negative label correctly identified                              |
-| `gm.min_accuracy`      | The minimum of the proportion of points with a positive label correctly identified and the proportion of points with a negative label correctly identified (common in min-max fairness) |
-| `gm.f1`                | F1 Score. Defined as:  (2 * TP) / (2 * TP + FP + FN)                                                                                                                                     |
-| `gm.precision`         | AKA Positive Prediction Rate                                                                                                                                                             |
-| `gm.recall`            | AKA True Positive Prediction Rate                                                                                                                                                        |
-| `gm.mcc`               | Matthews Correlation Coefficient. See https://en.wikipedia.org/wiki/Phi_coefficient                                                                                                      |
-
-#### Additional Performance Measures
-
-| Name              | Definition                                                                        |
-|-------------------|-----------------------------------------------------------------------------------|
-| `gm.acceptance_rate` | AKA precision AKA Positive Prediction Rate                                        |
-| `gm.cond_accept`     | Conditional Acceptance Rate. The ratio of positive predictions to positive labels |
-| `gm.cond_reject`     | Conditional Rejectance Rate. The ratio of negative predictions to negative labels |
-| `gm.specificity`     | AKA True Negative Rate                                                            |
-| `gm.rejection_rate`  | AKA Negative Predicted Value                                                      |
-| `gm.error_ratio`     | The ratio of False Positives to False Negatives                                    |
-
-
-#### Fairness Measures Supported
-
-[Sagemaker Clarify](https://docs.aws.amazon.com/sagemaker/latest/dg/clarify-measure-post-training-bias.html) Measures
-
-| Name                   | Definition                                                                                                                                                                                                                                                                                   |
-|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `gm.class_imbalance`      | Maximum difference between groups in Positive Data Rate                                                                                                                                                                                                                                      |
-| `gm.demographic_parity`   | AKA Statistical Parity.  Maximum difference between groups in Positive Prediction Rate                                                                                                                                                                                                       |
-| `gm.disparate_impact`     | The smallest Positive Prediction Rate of any group divided by the largest                                                                                                                                                                                                                    |
-| `gm.accuracy.diff`        | Maximum difference between groups in Accuracy                                                                                                                                                                                                                                                |
-| `gm.recall.diff`          | AKA Equal Opportunity. Maximum difference between groups in Recall                                                                                                                                                                                                                           |
-| `gm.cond_accept.diff`     | Maximum difference between groups in Conditional Acceptance Rate                                                                                                                                                                                                                             |
-| `gm.acceptance_rate.diff` | Maximum difference between groups in Acceptance Rate                                                                                                                                                                                                                                         |
-| `gm.specificity.diff`     | Maximum difference between groups in Specificity  (or True Negative Rate)                                                                                                                                                                                                                    |
-| `gm.cond_reject.diff`     | Maximum difference between groups in Conditonal Rejectance Rate                                                                                                                                                                                                                              |
-| `gm.rejection_rate.diff`  | Maximum difference between groups in Rejection Rate (or Negative Predicted Value)                                                                                                                                                                                                            |
-| `gm.treatment_equality`   | Maximum difference between groups in Error Ratio                                                                                                                                                                                                                                             |
-| `gm.gen_entropy`          | This is the expected square of a particular utility function divided by its expected value, minus 1 and then divided by 2. The function takes the form: `TP*1+FP*2+FN*1`, where TP, FP, NP, and TN are the true positives, false positives, false negatives and true negatives respectively. |
-
-Measures from [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf).
-
-All the measures in Verma and Rubin are defined as strict equalities for two groups. We relax them into a continuous measure that reports the maximum difference over any pair of groups between the left and right sides of the equality.
-These relaxations take value 0 only if the equalities are satisfied for all pairs of groups.
-
-| Name                     | Definition                                                                                            |
-|--------------------------|-------------------------------------------------------------------------------------------------------|
-| `gm.statistical_parity`  | AKA Demographic Parity. Maximum difference between groups in Positive Prediction Rate                 |
-| `gm.predictive_parity`   | AKA Rejection Rate Difference. Maximum difference between groups in Precision                         |
-| `gm.false_pos_rate.diff` | AKA  Specificity Difference. Maximum difference between groups in False Positive rate.                |
-| `gm.false_neg_rate.diff` | AKA Equal Opportunity and Recall difference. Maximum difference between groups in False Negative Rate |
-| `gm.equalized_odds`      | The average of `true_pos_rate.diff` and  `false_neg_rate.diff`                                        |
-| `gm.cond_use_accuracy`   | The average of `pos_pred_val.diff` and `neg_pred_val.diff`                                            |
-| `gm.predictive_equality` | Maximum difference in False Negative Rate                                                             |
-| `gm.accuracy._parity`    | Maximum difference in Accuracy                                                                        |
-| `gm.treatment_equality`  | Maximum difference between groups in Error Ratio                                                      |
+See [measures.md](./measures.md) for a full list of fairness and performance measures supported by OxonFair.

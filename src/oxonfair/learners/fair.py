@@ -288,7 +288,7 @@ class FairPredictor:
 
         if mask.sum() == 0:
             logger.warning("No solutions satisfy the constraint found, selecting the" +
-                           "closest solution")
+                           " closest solution.")
             weights = self.frontier[1]
             vmax = [self.frontier[0][1].argmin(),
                     self.frontier[0][1].argmax()][int(greater_is_better_const)]

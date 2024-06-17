@@ -7,9 +7,10 @@ from .group_metric_classes import ( # pylint: disable=unused-import # noqa
     GroupMetric,
     AddGroupMetrics,
     Utility)  # noqa: F401
-
-
 # N.B. BaseGroupMetric and Utility are needed for type declarations
+
+import .conditional_group_metrics # pylint: disable=unused-import # noqa
+
 def ge1(x):
     """Helper function.
     Return the elementwise maximum of x or 1.

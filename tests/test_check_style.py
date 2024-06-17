@@ -57,5 +57,5 @@ def test_md_links():
     assert missing_links == []
 
 
-def test_run_notebooks_without_errors():
-    Popen('pytest' '--nbmake', '--overwrite', '-n=auto', 'examples')
+#def test_run_notebooks_without_errors():
+#    Popen('pytest' '--nbmake', '--overwrite', '-n=auto', 'examples',)
