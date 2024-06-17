@@ -1,11 +1,10 @@
 # OxonFair: An Algorithmic Fairness Toolkit for High-Capacity Models
-
 OxonFair is an expressive toolkit designed to enforce a wide-range of fairness definitions and to customize binary classifier behavior.
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 
 For low-capacity models (e.g. linear regression over a small number of variables, and decision-trees of limited depth), we recomend [fairlearn](https://github.com/fairlearn/fairlearn).
 
-We support a range of complex classifiers including, [pytorch](www.) ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html), and [scikit learn](https://scikit-learn.org/stable/).
+We support a range of complex classifiers including [pytorch](https://pytorch.org/),[scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html),.
 
 It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
@@ -17,10 +16,11 @@ To install from source.
  3. Download the source of oxonfair and in the source directory run:
     pip install -e .
 
-For easy examples to get started using scikit learn see [sklearn.md](./sklearn.md), and [autogluon.md](./autogluon.md) for  autogluon.
+Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
 
-Check out [using_fit.md](./using_fit.md) to get a feel for the range of tasks that are solvable using OxonFair.
+For scikit learn see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
 
+For pytorch see the [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
 More demo notebooks are present in the [examples folder](./examples/README.md). 
 
 ## Demo using XGBoost
