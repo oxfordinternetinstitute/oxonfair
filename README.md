@@ -70,14 +70,17 @@ While also approximately satisfying a wide range of group constraints such as:
 * Minimum Precision Constraints (The precision should be above a particular level for all groups)
 * Custom Fairness Metrics
 
-The full set of constraints and objectives can be seen in the list of measures at the bottom of the document.
+The full set of constraints and objectives can be seen in the list of measures in [measures.md](./measures.md).
 
 ### Why Another Fairness Library?
 
-Fundamentally, most existing fairness methods are not appropriate for ensemble methods like AutoGluon.
-Under the hood, autogluon makes use of many different types of classifiers trained on random subsets of the data, and it's inherent complexity makes fairness methods that iteratively retrain classifiers punitively slow. The use of random subsets makes AutoGluon robust to small amounts of mislabeled data, but also means that methods that iteratively make small changes to the training data to enforce fairness can have unpredictable behavior. At same time, the many different types of sub-classifiers used mean that any method inprocessing method that requires the alteration of every method used to train a sub-classifier is not feasible.
+Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. This classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g. when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punatively slow when training the model once might take days, or even weeks, if you are trying to maximise performance. 
 
-That said, we make several design decisions which we believe make for a better experience for data scientists:
+At the same time, postprocessing methods which allow you to train once, and then improve fairness on held-out validation data generally requires the protected attributes to be avalible at test time, which is often infeasible, particularly with computer vision. 
+
+OxonFair is build from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use infered attributes where protected attributes are not avalible to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g. scikit-learn or xgboost, with infered attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
+
+That said, we make several additional design decisions which we believe make for a better experience for data scientists:
 
 #### Fine-grained control of behavior
 
