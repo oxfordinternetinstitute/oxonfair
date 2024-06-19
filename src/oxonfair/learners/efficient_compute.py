@@ -83,6 +83,7 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
         mask = front[:, 2+i] >= val*directions[2+i]
         front = front[mask]
         weights = weights[mask]
+
     # drop all points worse than the extrema of the front
     # NB we have ties so pick the best extrema
     # This matters for replicability rather than performance

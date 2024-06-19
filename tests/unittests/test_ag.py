@@ -188,13 +188,13 @@ def test_recall_diff_inferred(use_fast=True):
     # difference between protected attributes of less than 2.5%) despite not
     # using sex at run-time
 
-    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025)
+    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.001)
 
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    assert measures["original"]["recall.diff"] > 0.025
+    assert measures["original"]["recall.diff"] > 0.001
 
-    assert measures["updated"]["recall.diff"] < 0.025
+    assert measures["updated"]["recall.diff"] < 0.001
 
     # Prove that sex isn't being used by dropping it and reevaluating.
 

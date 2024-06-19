@@ -51,7 +51,7 @@ def default_setup_args(*, version):
         version=version,
         author="Governance of Emerging Technologies Programme (Oxford Internet Insitute)",
         url="https://github.com/ChrisMRuss/oxon-fair/",
-        description="AutoML Framework for evaluating and enforcing ML model fairness",
+        description="Toolkit for evaluating and enforcing ML model fairness",
         long_description=long_description,
         long_description_content_type="text/markdown",
         license="Apache-2.0",
@@ -83,6 +83,7 @@ def default_setup_args(*, version):
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
             "Programming Language :: Python :: 3.10",
+            "Programming Language :: Python :: 3.11",
             "Topic :: Software Development",
             "Topic :: Scientific/Engineering :: Artificial Intelligence",
             "Topic :: Scientific/Engineering :: Information Analysis",
@@ -98,20 +99,27 @@ def default_setup_args(*, version):
     return setup_args
 
 
-version = "0.1.5"
+version = "0.2"
 
 install_requires = [
     "numpy>=1.21.4",
     "pandas>=1.2.5",
+    "scikit-learn"
 ]
 
 extras_require = dict()
+full_requirements = ['matplotlib', 'autogluon.tabular', 'ucimlrepo', 'torch']
+notebook_requirements = full_requirements + ['fairlearn']
+test_requirements = notebook_requirements + ["tox", "pytest", "pytest-cov", 'flake8',
+                                             'linkcheckmd', 'ipynbcompress']
 
-test_requirements = ["tox", "pytest", "pytest-cov", 'autogluon', 'sklearn',
-                     'matplotlib', 'flake8', 'linkcheckmd', 'ucimlrepo', 'fairlearn']
-
+full_requirements = list(set(full_requirements))
+notebook_requirements = list(set(notebook_requirements))
 test_requirements = list(set(test_requirements))
+extras_require['full'] = full_requirements
+extras_require['notebooks'] = notebook_requirements
 extras_require["tests"] = test_requirements
+
 
 if __name__ == "__main__":
     create_version_file(version=version)

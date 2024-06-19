@@ -63,7 +63,7 @@ def compute_metrics(metrics: Sequence[Callable], y_true: np.ndarray, proba: np.n
                 scores[j, i] = metric(y_true, pred)[0]
             else:
                 np.subtract(tmp[:, 1], tmp[:, 0], diff)
-                scores[j, i] = metric(y_true, pred)
+                scores[j, i] = metric(y_true, diff)
     return scores
 
 
