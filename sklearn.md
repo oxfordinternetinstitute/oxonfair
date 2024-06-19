@@ -55,12 +55,12 @@ and prepare to enforce and evaluate fairness with respect to the variable `sex_ 
 
 ## Fit the object
 
-Here we call fit to maximise accuracy while ensuring that the difference in recall between the groups is less than 2%.
-A wide range of possible performance metrics and fairness measures are suported.
+Here we call fit to maximize accuracy while ensuring that the difference in recall between the groups is less than 2%.
+A wide range of possible performance metrics and fairness measures are supported.
 
     fpred.fit(gm.accuracy,gm.recall.diff,0.02)
 
-We can now visualise the space of possible trade-offs
+We can now visualize the space of possible trade-offs
 
     fpred.plot_frontier()
 
@@ -104,6 +104,6 @@ Evaluate fairness using standard metrics with:
 | Treatment Equality                                      |  0.172428  | 0.28022   |
 | Generalized Entropy                                     |  0.102481  | 0.105529  |
 
-call `fpredict.predict( )`, and `fpredict.predict_proba( )` to score new data.
+Call `fpredict.predict( )`, and `fpredict.predict_proba( )` to score new data.
 
 Once the base predictor has been trained, and the object built, you can use the fair predictor in the same way as with autogluon. See [README.md](./README.md) for details.

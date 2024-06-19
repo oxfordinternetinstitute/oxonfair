@@ -135,7 +135,7 @@ OxonFair also supports conditional metrics.
 These are used to compensate for acceptable biases present in the data.
 For example, in one [famous case](https://pubmed.ncbi.nlm.nih.gov/17835295/), Berkley showed a strong gender bias in admissions despite the fact that each department had minimal admissions bias with respect to gender. The cause underlying this was that women were disproportionately applying to departments with higher rejection rates.
 
-To measure this correct for this bias we follow the method set out in the chapter 1 questions of: [Statistics by Freedman et al.](https://www.goodreads.com/book/show/147358.Statistics), which [Wachter et al.](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3547922) applied to algorithmic fairness.
+To measure this correct for this bias we follow the method set out in chapter 2 of: [Statistics by Freedman et al.](https://www.goodreads.com/book/show/147358.Statistics), which [Wachter et al.](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3547922) applied to algorithmic fairness.
 
 This measure compensates for the fact that different selection rates across groups may be driven by an acceptable factor that is correlated with the protected attributes. For example, in the Berkley case, it is acceptable that different departments should have different admissions rates, but the choice of department is correlated with gender.
 
