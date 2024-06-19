@@ -4,11 +4,11 @@ OxonFair is an expressive toolkit designed to enforce a wide-range of fairness d
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 It is designed and works for computer vision and NLP problems alongside tabular data.
 
-For low-capacity models (, linear regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
+For low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
 
 We support a range of complex classifiers including [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html).
 
-It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
+OxonFair is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
 ## Source install
 
