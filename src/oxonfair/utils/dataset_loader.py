@@ -89,21 +89,27 @@ class partition:
             g_name = groups
             if replace_groups:
                 total_data[groups] = total_data[groups].replace(replace_groups)
-            groups = total_data[groups]
+                groups = total_data[groups]
+
             if discard_groups:
+                groups = total_data[g_name]
                 total_data = total_data.drop(g_name, axis=1)
+
         else:
             if replace_groups:
+                groups = total_data[groups]
                 groups = groups.replace(replace_groups)
 
         if resample:
             mask = resample(groups, target)
             total_data = total_data[mask]
-            groups = groups[mask]
+            if discard_groups or replace_groups:
+                groups = groups[mask]
             target = target[mask]
 
         total_data.reset_index(drop=True)
-        groups.reset_index(drop=True)
+        if discard_groups or replace_groups:
+            groups.reset_index(drop=True)
 
         if encoding == 'onehot':
             total_data = total_data.get_dummies()
@@ -112,19 +118,27 @@ class partition:
         elif encoding is not None:
             assert encoding is not None, "encoding must be 'onehot', 'ordinal', or 'None'"
 
-        part = uniform_partition(target, groups, train_prop=train_proportion,
-                                 test_prop=test_proportion, seed=seed)
+        if discard_groups or replace_groups:
+            part = uniform_partition(target, groups, train_prop=train_proportion,
+                                     test_prop=test_proportion, seed=seed)
+            train_groups = groups.iloc[part == 0]
+            val_groups = groups.iloc[part == 2]
+            test_groups = groups.iloc[part == 1]
+        else:
+            part = uniform_partition(target, total_data[groups], train_prop=train_proportion,
+                                     test_prop=test_proportion, seed=seed)
+            train_groups = groups
+            val_groups = groups
+            test_groups = groups
+
         train = total_data.iloc[part == 0]
-        train_groups = groups.iloc[part == 0]
         train_y = target[part == 0]
 
         val = total_data.iloc[part == 2]
         val_y = target[part == 2]
-        val_groups = groups.iloc[part == 2]
 
         test = total_data.iloc[part == 1]
         test_y = target[part == 1]
-        test_groups = groups.iloc[part == 1]
 
         train_dict = DataDict(train_y, train, train_groups)
         val_dict = DataDict(val_y, val, val_groups)
