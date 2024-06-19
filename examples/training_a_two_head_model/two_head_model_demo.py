@@ -205,4 +205,3 @@ if __name__ == "__main__":
     loaded_model = LitTwoHead.load_from_checkpoint(checkpoint_path=checkpoint_callback.best_model_path, model=model)
     loaded_model.eval()
     trainer.test(model=loaded_model, dataloaders=test_loader)
-    
