@@ -18,7 +18,7 @@ Download the source of OxonFair and in the source directory run:
 
     pip install -e .\[full\]
 
-This will download and install enough code to run any notebooks except those comparing with fairlearn.
+This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too excessive, try a minimal install.
 
 ### Compare with Fairlearn
 
@@ -31,20 +31,26 @@ This will download enough supporting libraries to run all the notebooks.
 ### Minimal install
 
 Download the source of OxonFair and in the source directory run:
+
     pip install -e .
 
-By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load datasets, without install `ucimlrepo`, and will have to install `matplotlib` to plot.
+By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load datasets, without installing `ucimlrepo`, and will have to install `matplotlib` to plot.
 
 ### Full install for running the test suite
 
 Download the source of OxonFair and in the source directory run:
+
     pip install -e .\[tests\]
+
+You probably don't want to install this unless you're looking to modify the codebase.
+
+## Examples
 
 Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
 
 For scikit/XGBoost, see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
 
-For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
+For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this [Example Notebook](./examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
 
 More demo notebooks are present in the [examples folder](./examples/README.md).
 
