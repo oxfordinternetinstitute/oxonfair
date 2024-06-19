@@ -36,25 +36,25 @@ test_dict_g = fair.build_data_dict(test_y, test, test['sex_ Female'])
 
 
 def test_slack_constraints(use_fast=True):
-    """Slack constraints should not alter the solution found.
-    In practice there seems to be some instability in the slow pathway and occasionally it does.
-    Rerun and confirm there's a problem before debugging."""
+    """Slack constraints should not alter the solution found."""
     fpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
     cpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
 
-    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.0075)
-    cpredictor.fit(gm.accuracy, gm.recall.diff, 0.0075,
+    fpredictor.fit(gm.accuracy, gm.recall.min, .99)
+    cpredictor.fit(gm.accuracy, gm.recall.min, .99,
                    additional_constraints=((gm.pos_pred_rate, -1),))
 
     # Evaluate the change in fairness (recall difference corresponds to EO)
     measures = fpredictor.evaluate_fairness(verbose=False)
     cmeasures = cpredictor.evaluate_fairness(verbose=False)
 
-    assert np.isclose(measures, cmeasures, atol=0.01).all().all()
+    assert np.isclose(measures, cmeasures).all().all()
 
     # check fit did something
-    assert measures["original"]["recall.diff"] > 0.0075
-    assert measures["updated"]["recall.diff"] < 0.0075
+    measures = fpredictor.evaluate_fairness(metrics={'recall.min': gm.recall.min}, verbose=False)
+
+    assert measures["original"]["recall.min"] < 0.99
+    assert measures["updated"]["recall.min"] > 0.99
 
 
 def test_slack_constraints_slow():
