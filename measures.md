@@ -3,9 +3,9 @@
 OxonFair uses a wide range of measures to enforce and measures fairness and performance.
 
 These measures can be passed to a `FairPredictor` by calling `FairPredictor.fit(objective, constraint, value)`.
-This will optimise the measure `objective` subject to the requirement that the other measure `constraint` is greater or less than `value`, as required.
+This will optimize the measure `objective` subject to the requirement that the other measure `constraint` is greater or less than `value`, as required.
 
-These measures can also evaluated by passing to the evaluation functions `evaluate`, `evaluate_groups`, and `evaluate_fairness` as a dict of measures, where the keys of the dict are short-form names using when `verbose=False` and the values are measures.
+These measures can also be evaluated by passing to the evaluation functions `evaluate`, `evaluate_groups`, and `evaluate_fairness` as a dict of measures, where the keys of the dict are short-form names using when `verbose=False` and the values are measures.
 
 This document lists the standard measures provided by the group_metrics library, which is imported as:
 
@@ -39,7 +39,7 @@ Having defined a metric as above, we have a range of different objects:
 * `metric.max` reports the maximum value for any group.
 * `metric.min` reports the minimum value for any group.
 * `metric.overall` reports the overall value for all groups combined, and is the same as calling `metric` directly
-* `metric.ratio` reports the average ratio over pairs of distinct groups, where smallest value is divided by the largest
+* `metric.ratio` reports the average ratio over pairs of distinct groups, where the smallest value is divided by the largest
 * `metric.per_group` reports the value for every group.
 
 These can be passed directly to fit, or to the evaluation functions we provide.
@@ -77,7 +77,7 @@ gm.
 | `gm.accuracy`          | Proportion of points correctly identified                                                                                                                                                 |
 | `gm.balanced_accuracy` | The average of the proportion of points with a positive label correctly identified and the proportion of points with a negative label correctly identified                              |
 | `gm.min_accuracy`      | The minimum of the proportion of points with a positive label correctly identified and the proportion of points with a negative label correctly identified (common in min-max fairness) |
-| `gm.f1`                | F1 Score. Defined as:  (2 * TP) / (2 * TP + FP + FN)                                                                                                                                     |
+| `gm.f1`                | F1 Score. Defined as: (2 * TP) / (2 * TP + FP + FN)                                                                                                                                     |
 | `gm.precision`         | AKA Positive Prediction Rate                                                                                                                                                             |
 | `gm.recall`            | AKA True Positive Prediction Rate                                                                                                                                                        |
 | `gm.mcc`               | Matthews Correlation Coefficient. See https://en.wikipedia.org/wiki/Phi_coefficient                                                                                                      |
@@ -123,7 +123,7 @@ These relaxations take value 0 only if the equalities are satisfied for all pair
 | `gm.predictive_parity`   | AKA Rejection Rate Difference. Average difference between groups in Precision                         |
 | `gm.false_pos_rate.diff` | AKA  Specificity Difference. Average difference between groups in False Positive rate.                |
 | `gm.false_neg_rate.diff` | AKA Equal Opportunity or Recall difference. Average difference between groups in False Negative Rate |
-| `gm.equalized_odds`      | The average of `true_pos_rate.diff` and  `false_neg_rate.diff`                                        |
+| `gm.equalized_odds`      | The average of `true_pos_rate.diff` and `false_neg_rate.diff`                                        |
 | `gm.cond_use_accuracy`   | The average of `pos_pred_val.diff` and `neg_pred_val.diff`                                            |
 | `gm.predictive_equality` | Average difference in False Negative Rate                                                             |
 | `gm.accuracy._parity`    | Average difference in Accuracy                                                                        |
@@ -132,10 +132,10 @@ These relaxations take value 0 only if the equalities are satisfied for all pair
 ## Conditional Metrics
 
 OxonFair also supports conditional metrics.
-These are used to compensate for accetable biases present in the data.
+These are used to compensate for acceptable biases present in the data.
 For example, in one [famous case](https://pubmed.ncbi.nlm.nih.gov/17835295/), Berkley showed a strong gender bias in admissions despite the fact that each department had minimal admissions bias with respect to gender. The cause underlying this was that women were disproportionately applying to departments with higher rejection rates.
 
-To measure this correct for this bias we the follow the method set out in the chapter 1 questions of: [Statistics by Freedman et al.](https://www.goodreads.com/book/show/147358.Statistics), which [Wachter et al.](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3547922) applied to algorithmic fairness.
+To measure this correct for this bias we follow the method set out in the chapter 1 questions of: [Statistics by Freedman et al.](https://www.goodreads.com/book/show/147358.Statistics), which [Wachter et al.](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3547922) applied to algorithmic fairness.
 
 This measure compensates for the fact that different selection rates across groups may be driven by an acceptable factor that is correlated with the protected attributes. For example, in the Berkley case, it is acceptable that different departments should have different admissions rates, but the choice of department is correlated with gender.
 
@@ -144,29 +144,29 @@ This is also measured by [Amazon Clarify](https://docs.aws.amazon.com/sagemaker/
 
 However, no other fairness toolkit optimizes it.
 All of these measures are subtly different, but weight data in the same way.
-Freedman et al. considers the weighted proportion of people in a particular group recieving positive decisions vs. the total number of people in the group.  
+Freedman et al. considers the weighted proportion of people in a particular group receiving positive decisions vs. the total number of people in the group.  
 
-Wachter et al. examines the weighted proportion of [members of a protected group]  within the set of all people recieving a positive decision; and the same weighted proportion of [members of the protected group] within the set of all people recieving a negative decision. If this proportion is larger for the positive set, than the negative set, the group is doing disproportionately well, and if it smaller, the group is doing disproportionately badly.
+Wachter et al. examines the weighted proportion of [members of a protected group] within the set of all people receiving a positive decision; and the same weighted proportion of [members of the protected group] within the set of all people receiving a negative decision. If this proportion is larger for the positive set, than the negative set, the group is doing disproportionately well, and if it is smaller, the group is doing disproportionately badly.
 
 Clarify and IBM360 measures the difference of the two measures in Wachter et al.
 
-All methods are broadly equivilent in the sense that the difference between every pair of groups using Freedman's measure is zero if and only if the difference between positives and negatives measures of Wachter et al., for every group is zero.
+All methods are broadly equivalent in the sense that the difference between every pair of groups using Freedman's measure is zero if and only if the difference between positives and negatives measures of Wachter et al., for every group is zero.
 
-For simplicity, we implement Freedman's measure. This give nautural extensions to difference in conditional selection rate, corresponding to conditional demographic parity, and average ratio in conditional selection rate, corresponding to disparate impact. Moreover, the levelling-up measures such as minimal conditional selection rate will also work, which is not the case for the measure of Wachter et al.
+For simplicity, we implement Freedman's measure. This give natural extensions to difference in conditional selection rate, corresponding to conditional demographic parity, and average ratio in conditional selection rate, corresponding to disparate impact. Moreover, the levelling-up measures such as minimal conditional selection rate will also work, which is not the case for the measure of Wachter et al.
 
-We assign a weight $w_i$ to an individual $i$ belonging to a particular protected group, and conditioning factor e.g. school as:
+We assign a weight $w_i$ to an individual $i$ belonging to a particular protected group, and conditioning factor e.g., school as:
 
 $$
 w_i = \frac{\#\text{individuals with the same conditioning factor}}{\#\text{individuals belonging to the same group and conditioning factor}}
 $$
 
-The conditional positive decision rate is then given by:
+The conditional positive decision rate is given by:
 $$ \frac {\text{wTP+ wFP}{wTP +wFP +wFN +wTN}$$ where wTP, wFP, wFN, wTN are the weighted sum of True Positives, False Positives using the weights $w_i$.
 
 This can be used for levelling up, by enforcing minimum conditional selection rates, and enforcing conditional demographic parity.
 
 The use of conditional metrics is somewhat more involved, as it requires the specification of a conditioning factor, alongside groups.
-Here is a quick example using a conditional minimimal selection rate of 0.3.
+Here is a quick example using a conditional minimal selection rate of 0.3.
 
     import oxonfair
     import xgboost
@@ -186,4 +186,4 @@ We support conditioning on range of linear measures.
 4. `cgm.false_neg_rate` conditional false negative rate
 5. `cgm.false_pos_rate` conditional false positive rate
 
-For false negative and false positive rate, we normalise by the total number of negatively or positively labelled points rather than the total number of points.
+For false negative and false positive rate, we normalize by the total number of negatively or positively labelled points rather than the total number of points.
