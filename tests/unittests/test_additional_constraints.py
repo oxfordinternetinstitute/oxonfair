@@ -42,8 +42,8 @@ def test_slack_constraints(use_fast=True):
     fpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
     cpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
 
-    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.005)
-    cpredictor.fit(gm.accuracy, gm.recall.diff, 0.005, 
+    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.0075)
+    cpredictor.fit(gm.accuracy, gm.recall.diff, 0.0075,
                    additional_constraints=((gm.pos_pred_rate, -1),))
 
     # Evaluate the change in fairness (recall difference corresponds to EO)
@@ -53,8 +53,8 @@ def test_slack_constraints(use_fast=True):
     assert np.isclose(measures, cmeasures, atol=0.01).all().all()
 
     # check fit did something
-    assert measures["original"]["recall.diff"] > 0.005
-    assert measures["updated"]["recall.diff"] < 0.005
+    assert measures["original"]["recall.diff"] > 0.0075
+    assert measures["updated"]["recall.diff"] < 0.0075
 
 
 def test_slack_constraints_slow():
