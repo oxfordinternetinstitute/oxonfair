@@ -31,8 +31,8 @@ predictor.fit(train, train_y)
 val_dict = {"data": val, "target": val_y}
 test_dict = {"data": test, "target": test_y}
 
-val_dict_g = fair.build_data_dict(val_y, val, val['sex_ Female'])
-test_dict_g = fair.build_data_dict(test_y, test, test['sex_ Female'])
+val_dict_g = fair.DataDict(val_y, val, val['sex_ Female'])
+test_dict_g = fair.DataDict(test_y, test, test['sex_ Female'])
 
 
 def test_slack_constraints(use_fast=True):

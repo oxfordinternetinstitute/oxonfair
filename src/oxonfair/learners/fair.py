@@ -956,7 +956,7 @@ def single_threshold(x) -> np.ndarray:
     return np.ones((x.shape[0], 1))
 
 
-def build_data_dict(target, data, groups=None, conditioning_factor=None) -> dict:
+def DataDict(target, data, groups=None, conditioning_factor=None) -> dict:
     "Helper function that builds dictionaries for use with sklearn classifiers"
     assert target.shape[0] == data.shape[0]
     assert data.ndim == 2
@@ -974,8 +974,8 @@ def build_data_dict(target, data, groups=None, conditioning_factor=None) -> dict
     return out
 
 
-def build_deep_dict(target, score, groups, groups_inferred=None, *,
-                    conditioning_factor=None) -> dict:
+def DeepDataDict(target, score, groups, groups_inferred=None, *,
+                 conditioning_factor=None) -> dict:
     """Wrapper around build_data_dict for deeplearning with inferred attributes.
      It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
@@ -998,7 +998,7 @@ def build_deep_dict(target, score, groups, groups_inferred=None, *,
     else:
         # assert score.shape[1] > 1, 'When groups_inferred is None, score must also contain inferred group information'
         data = score
-    return build_data_dict(target, data, groups, conditioning_factor=conditioning_factor)
+    return DataDict(target, data, groups, conditioning_factor=conditioning_factor)
 
 
 def DeepFairPredictor(target, score, groups, groups_inferred=None,
@@ -1020,7 +1020,7 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
             with the output of the fast pathway). By default 'hybrid' unless use_actual_groups is true, in which
             case True
      """
-    val_data = build_deep_dict(target, score, groups, groups_inferred, conditioning_factor=conditioning_factor)
+    val_data = DeepDataDict(target, score, groups, groups_inferred, conditioning_factor=conditioning_factor)
 
     def square_align(array):
         return np.stack((array[:, 1], 1-array[:, 1]), 1)

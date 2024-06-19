@@ -40,8 +40,8 @@ Step 1 requires considerably more preamble when using sklearn.
     ### We pass dictionaries that represent the entire dataset to get round this.
     ### They contain 'target' 'data', 'groups' (optional), and 'factor' (optional)
     
-    val_dict = fair.build_data_dict(val_target,val_data)
-    test_dict = fair.build_data_dict(test_target, test_data) 
+    val_dict = fair.DataDict(val_target,val_data)
+    test_dict = fair.DataDict(test_target, test_data) 
 
 ## Train a classifier
 
