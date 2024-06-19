@@ -10,13 +10,6 @@ We support a range of complex classifiers including [pytorch](https://pytorch.or
 
 It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
-Compared to autogluon.fair:
-We support:
-
-    * scikit-learn, xgboost, and pytorch (for image and NLP tasks)
-    * a broader range of fairness measures, including conditional metrics.
-    * improved performance on tabular data
-
 ## Source install
 
 ### Standard install
