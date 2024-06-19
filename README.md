@@ -4,7 +4,7 @@ OxonFair is an expressive toolkit designed to enforce a wide-range of fairness d
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 It is designed and works for computer vision and NLP problems alongside tabular data.
 
-For low-capacity models (e.g. linear regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
+For low-capacity models (, linear regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
 
 We support a range of complex classifiers including [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html).
 
@@ -44,14 +44,14 @@ By default, this will only install the necessary dependencies sklearn; pandas; a
 
 ### Full install for running the test suite
 
-Download the source of oxonfair and in the source directory run:
+Download the source of OxonFair and in the source directory run:
     pip install -e .\[tests\]
 
 Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
 
 For scikit/XGBoost, see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
 
-For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this  [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
+For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
 
 More demo notebooks are present in the [examples folder](./examples/README.md).
 
@@ -106,11 +106,11 @@ The full set of constraints and objectives can be seen in the list of measures i
 
 ### Why Another Fairness Library?
 
-Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. These classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g. when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punitively slow when training the model once might take days, or even weeks, if you are trying to maximize performance.
+Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. These classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g., when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punitively slow when training the model once might take days, or even weeks, if you are trying to maximize performance.
 
 At the same time, postprocessing methods which allow you to train once, and then improve fairness on held-out validation data generally requires the protected attributes to be available at test time, which is often infeasible, particularly with computer vision.
 
-OxonFair is build from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use inferred attributes where protected attributes are not available to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g. scikit-learn or xgboost, with inferred attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
+OxonFair is build from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use inferred attributes where protected attributes are not available to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g., scikit-learn or xgboost, with inferred attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
 
 That said, we make several additional design decisions which we believe make for a better experience for data scientists:
 
@@ -245,7 +245,7 @@ See this [notebook](./examples/compas_autogluon.ipynb) for details.
 
 ### Best Practices
 
-It is common for machine learning algorithms to overfit training data. Therefore, if you want your fairness constraints to carry over to unseen data we recommend that they are enforced on a large validation set, rather than the training set. For low-dimensional datasets, many classifiers, with a careful choice of hyperparameter,  are robust to overfitting and fairness constraints enforced on training data can carry over to unseen test data. In fact, given the choice between enforcing fairness constraints on a large training set, vs. using a significantly smaller validation set, reusing the training set may result in better generalization of the desired behavior to unseen data. However, this behavior is not guaranteed, and should always be empirically validated.
+It is common for machine learning algorithms to overfit training data. Therefore, if you want your fairness constraints to carry over to unseen data we recommend that they are enforced on a large validation set, rather than the training set. For low-dimensional datasets, many classifiers, with a careful choice of hyperparameter, are robust to overfitting and fairness constraints enforced on training data can carry over to unseen test data. In fact, given the choice between enforcing fairness constraints on a large training set, vs. using a significantly smaller validation set, reusing the training set may result in better generalization of the desired behavior to unseen data. However, this behavior is not guaranteed, and should always be empirically validated.
 
 #### Challenges with unbalanced data
 
