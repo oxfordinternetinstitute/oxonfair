@@ -57,8 +57,8 @@ def default_setup_args(*, version):
         license="Apache-2.0",
         license_files=("LICENSE", "NOTICE"),
         # Package info
-        packages=find_packages("src"),
         package_dir={"": "src"},
+        packages=find_packages("src"),
         namespace_packages=[],
         zip_safe=True,
         include_package_data=True,
