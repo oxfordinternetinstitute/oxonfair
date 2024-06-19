@@ -4,26 +4,53 @@ OxonFair is an expressive toolkit designed to enforce a wide-range of fairness d
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 It is designed and works for computer vision and NLP problems alongside tabular data.
 
-For low-capacity models (e.g. linear regression over a small number of variables, and decision-trees of limited depth), we recomend [fairlearn](https://github.com/fairlearn/fairlearn).
+For low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
 
 We support a range of complex classifiers including [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html).
 
-It is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
+OxonFair is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
 ## Source install
 
-To install from source.
+### Standard install
 
- 1. (recomended) Install autogluon (see <https://auto.gluon.ai/stable/index.html#installation>)
- 2. (Minimal Alternative) Install scikit learn (see <https://scikit-learn.org/stable/install.html>) or XGboost (see <https://xgboost.readthedocs.io/en/stable/install.html>)
- 3. Download the source of oxonfair and in the source directory run:
+Download the source of OxonFair and in the source directory run:
+
+    pip install -e .\[full\]
+
+This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too excessive, try a minimal install.
+
+### Compare with Fairlearn
+
+Download the source of OxonFair and in the source directory run:
+
+    pip install -e .\[notebooks\]
+
+This will download enough supporting libraries to run all the notebooks.
+
+### Minimal install
+
+Download the source of OxonFair and in the source directory run:
+
     pip install -e .
+
+By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load datasets, without installing `ucimlrepo`, and will have to install `matplotlib` to plot.
+
+### Full install for running the test suite
+
+Download the source of OxonFair and in the source directory run:
+
+    pip install -e .\[tests\]
+
+You probably don't want to install this unless you're looking to modify the codebase.
+
+## Examples
 
 Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
 
-For scikit/XGBoost learn see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
+For scikit/XGBoost, see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
 
-For pytorch see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this  [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
+For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this [Example Notebook](./examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
 
 More demo notebooks are present in the [examples folder](./examples/README.md).
 
@@ -52,7 +79,7 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
 
 ## Overview
 
-Oxonfair is a postprocessing approach for enforcing fairness, with support for a wide range of performance metrics and fairness criteria, and support for inferred attributes, i.e. it does not require access to protected attributes at test time.
+OxonFair is a postprocessing approach for enforcing fairness, with support for a wide range of performance metrics and fairness criteria, and support for inferred attributes, i.e., it does not require access to protected attributes at test time.
 Under the hood, FairPredictor works by adjusting the decision boundary for each group individually. Where groups are not available, it makes use of inferred group membership to adjust decision boundaries.
 
 The key idea underlying this toolkit is that for a wide range of use cases, the most suitable classifier should do more than maximize some form of accuracy.
@@ -78,11 +105,11 @@ The full set of constraints and objectives can be seen in the list of measures i
 
 ### Why Another Fairness Library?
 
-Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. This classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g. when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punatively slow when training the model once might take days, or even weeks, if you are trying to maximise performance.
+Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. These classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g., when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punitively slow when training the model once might take days, or even weeks, if you are trying to maximize performance.
 
-At the same time, postprocessing methods which allow you to train once, and then improve fairness on held-out validation data generally requires the protected attributes to be avalible at test time, which is often infeasible, particularly with computer vision.
+At the same time, postprocessing methods which allow you to train once, and then improve fairness on held-out validation data generally requires the protected attributes to be available at test time, which is often infeasible, particularly with computer vision.
 
-OxonFair is build from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use infered attributes where protected attributes are not avalible to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g. scikit-learn or xgboost, with infered attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
+OxonFair is build from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use inferred attributes where protected attributes are not available to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g., scikit-learn or xgboost, with inferred attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
 
 That said, we make several additional design decisions which we believe make for a better experience for data scientists:
 
@@ -90,13 +117,13 @@ That said, we make several additional design decisions which we believe make for
 
 ##### Wide Choice of performance measure
 
-Unlike other approaches to fairness, FairPredictor allows the optimization of arbitrary performance measures such as F1 or MCC, subject to fairness constraints. This can substantially improve the fairness/performance trade-off with, for example, F1 scores being 3-4% higher when directly optimized for rather than accuracy.
+Unlike other approaches to fairness, FairPredictor allows the optimization of arbitrary performance measures such as F1 or MCC, subject to fairness constraints. This can substantially improve the fairness/performance trade-off with, for example, F1 scores frequently being 3-4% higher when directly optimized for rather than accuracy.
 
 ##### Wide Choice of Fairness Measures
 
 Rather than offering a range of different fairness methods that enforce a small number of fairness definitions through a variety of different methods, we offer one method that can enforce a much wider range of fairness definitions out of the box, alongside support for custom fairness definitions.
 
-Of the set of decision-based group-metrics  discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify](https://pages.awscloud.com/rs/112-TZM-766/images/Fairness.Measures.for.Machine.Learning.in.Finance.pdf), out of the box FairPredictor offers the ability to both measure and enforce all of the 8 group metrics used to evaluate classifier decision measured in Verma and Rubin, and all 12 group measures used to evaluate dcisions in Clarify.
+Of the set of decision-based group-metrics  discussed in [Verma and Rubin](https://fairware.cs.umass.edu/papers/Verma.pdf), and the metrics measured by [Sagemaker Clarify](https://pages.awscloud.com/rs/112-TZM-766/images/Fairness.Measures.for.Machine.Learning.in.Finance.pdf), out of the box FairPredictor offers the ability to both measure and enforce all of the 8 group metrics used to evaluate classifier decision measured in Verma and Rubin, and all 12 group measures used to evaluate decisions in Clarify.
 
 ##### Direct Remedy of Harms
 
@@ -122,7 +149,7 @@ We provide support for the utility based approach set out in [Fairness On The Gr
 
 Utility functions can be defined in one line.
 
-For example, if we have a situation where an ML system identifies potential problems that require intervening, it might be that every intervention has a cost of 1, regardless of if it was needed, but a missed intervention that was needed has a cost of 5. Finally, not making an intervention when one was not needed has a cost of 0. This can be written as:
+For example, consider a situation where an ML system identifies potential problems that require intervening.  Every intervention may have a cost of 1, regardless of if it was needed, but a missed intervention that was needed has a cost of 5. Finally, not making an intervention when one was unneeded has a cost of 0. This can be written as:
 
     my_utility=gm.Utility([1, 1, 5, 0], 'Testing Costs')
 
@@ -217,7 +244,7 @@ See this [notebook](./examples/compas_autogluon.ipynb) for details.
 
 ### Best Practices
 
-It is common for machine learning algorithms to overfit training data. Therefore, if you want your fairness constraints to carry over to unseen data we recommend that they are enforced on a large validation set, rather than the training set. For low-dimensional datasets, many classifiers, with a careful choice of hyperparameter,  are robust to overfitting and fairness constraints enforced on training data can carry over to unseen test data. In fact, given the choice between enforcing fairness constraints on a large training set, vs. using a significantly smaller validation set, reusing the training set may result in better generalization of the desired behavior to unseen data. However, this behavior is not guaranteed, and should always be empirically validated.
+It is common for machine learning algorithms to overfit training data. Therefore, if you want your fairness constraints to carry over to unseen data we recommend that they are enforced on a large validation set, rather than the training set. For low-dimensional datasets, many classifiers, with a careful choice of hyperparameter, are robust to overfitting and fairness constraints enforced on training data can carry over to unseen test data. In fact, given the choice between enforcing fairness constraints on a large training set, vs. using a significantly smaller validation set, reusing the training set may result in better generalization of the desired behavior to unseen data. However, this behavior is not guaranteed, and should always be empirically validated.
 
 #### Challenges with unbalanced data
 

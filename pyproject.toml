@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=68.2.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oxonfair"
+dynamic = ["optional-dependencies",'license','classifiers','version','authors','dependencies','readme','description','requires-python'] 
+
+[project.urls]
+Homepage =  "https://github.com/ChrisMRuss/oxon-fair/"
+Issues = "https://github.com/ChrisMRuss/oxon-fair/issues"

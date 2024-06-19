@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from oxonfair import build_data_dict
+from oxonfair import DataDict
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -126,9 +126,9 @@ class partition:
         test_y = target[part == 1]
         test_groups = groups.iloc[part == 1]
 
-        train_dict = build_data_dict(train_y, train, train_groups)
-        val_dict = build_data_dict(val_y, val, val_groups)
-        test_dict = build_data_dict(test_y, test, test_groups)
+        train_dict = DataDict(train_y, train, train_groups)
+        val_dict = DataDict(val_y, val, val_groups)
+        test_dict = DataDict(test_y, test, test_groups)
         return train_dict, val_dict, test_dict
 
 

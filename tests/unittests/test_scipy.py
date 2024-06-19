@@ -39,8 +39,8 @@ train_dict = {"data": train, "target": train_y}
 val_dict = {"data": val, "target": val_y}
 test_dict = {"data": test, "target": test_y}
 
-val_dict_g = fair.build_data_dict(val_y, val, val['sex_ Female'])
-test_dict_g = fair.build_data_dict(test_y, test, test['sex_ Female'])
+val_dict_g = fair.DataDict(val_y, val, val['sex_ Female'])
+test_dict_g = fair.DataDict(test_y, test, test['sex_ Female'])
 
 
 def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
