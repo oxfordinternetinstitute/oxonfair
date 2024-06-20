@@ -61,8 +61,8 @@ class partition:
                     {'Hispanic':'Other', 'Native American':'Other', 'Asian':'Other'}
         encoding: if 'ordinal' or 'onehot' encode data accordingly. If None don't encode.
         resample: override existing resampling. This should be a Resample class.
-        seperate_groups: default False. This indicates if groups should be stored as a seperable human readable
-                         array or kept as a string. 
+        seperate_groups: default False. This indicates if groups should be stored as a seperable human
+                        readable array or kept as a string.
                          Should be False if you don't want to explicitly pass groups to predict.
         """
         assert groups is not None or self.default_groups is not None
