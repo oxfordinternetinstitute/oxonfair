@@ -1,5 +1,6 @@
 from oxonfair import dataset_loader, FairPredictor
 from oxonfair import group_metrics as gm
+import numpy as np
 import xgboost
 
 
@@ -10,6 +11,12 @@ def test_no_discard():
     fpredict = FairPredictor(predictor, val_data)
     fpredict.fit(gm.accuracy, gm.equal_opportunity, 0.02)
     fpredict.predict(test_data['data'])
+    assert True
+    # check that specifying groups manualy is the same as not specifying
+    fpredict2 = FairPredictor(predictor, val_data, 'sex')
+    fpredict2.fit(gm.accuracy, gm.equal_opportunity, 0.02)
+    fpredict2.predict(test_data['data'])
+    assert np.isclose(fpredict.evaluate_fairness(), fpredict2.evaluate_fairness()).all().all()
     assert True
 
 
@@ -30,4 +37,5 @@ def test_discard():
 def test_replace():
     train, val, test = dataset_loader.compas('race', train_proportion=0.66, test_proportion=0.33,
                                              discard_groups=True, 
-                                             replace_groups={'Hispanic': 'Other', 'Native American':' Other', 'Asian': 'Other'})
+                                             replace_groups={'Hispanic': 'Other', 'Native American': ' Other', 'Asian': 'Other'})
+    assert (train['groups']=='Hispanic').sum()==0

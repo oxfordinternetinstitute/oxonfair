@@ -50,7 +50,7 @@ class partition:
 
     def __call__(self,  groups=None, train_proportion=0.5, test_proportion=0.25, *,
                  seed=None, discard_groups=False, replace_groups=False,
-                 encoding='ordinal', resample=None):
+                 encoding='ordinal', resample=None, seperate_groups=False):
         """Generic code for controling datapartitioning.
         groups: a specification of the column containing group information that can be understood by pandas
         train_proportion: number between 0 and 1 expressing the proportion of the dataset used for training
@@ -61,6 +61,9 @@ class partition:
                     {'Hispanic':'Other', 'Native American':'Other', 'Asian':'Other'}
         encoding: if 'ordinal' or 'onehot' encode data accordingly. If None don't encode.
         resample: override existing resampling. This should be a Resample class.
+        seperate_groups: default False. This indicates if groups should be stored as a seperable human readable
+                         array or kept as a string. 
+                         Should be False if you don't want to explicitly pass groups to predict.
         """
         assert groups is not None or self.default_groups is not None
         if groups is None:
@@ -89,6 +92,8 @@ class partition:
             g_name = groups
             if replace_groups:
                 total_data[groups] = total_data[groups].replace(replace_groups)
+
+            if seperate_groups:
                 groups = total_data[groups]
 
             if discard_groups:
@@ -97,7 +102,6 @@ class partition:
 
         else:
             if replace_groups:
-                groups = total_data[groups]
                 groups = groups.replace(replace_groups)
 
         if resample:
@@ -108,7 +112,7 @@ class partition:
             target = target[mask]
 
         total_data.reset_index(drop=True)
-        if discard_groups or replace_groups:
+        if discard_groups or seperate_groups:
             groups.reset_index(drop=True)
 
         if encoding == 'onehot':
@@ -116,9 +120,9 @@ class partition:
         elif encoding == 'ordinal':
             total_data = total_data.apply(LabelEncoder().fit_transform)
         elif encoding is not None:
-            assert encoding is not None, "encoding must be 'onehot', 'ordinal', or 'None'"
+            assert encoding is not None, "encoding must be 'onehot', 'ordinal', or None"
 
-        if discard_groups or replace_groups:
+        if discard_groups or seperate_groups:
             part = uniform_partition(target, groups, train_prop=train_proportion,
                                      test_prop=test_proportion, seed=seed)
             train_groups = groups.iloc[part == 0]

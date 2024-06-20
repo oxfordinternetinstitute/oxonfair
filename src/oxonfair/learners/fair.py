@@ -92,10 +92,10 @@ class FairPredictor:
             else:
                 groups = False
         else:
-            if validation_data.get('groups', None) is not None:
-                    logger.warning(("Groups passed twice to fairpredictor both as part of "
-                                    "the dataset and as an argument. "
-                                    "The argument will be used."))
+            if isinstance(validation_data, dict) and validation_data.get('groups', None) is not None:
+                logger.warning(("Groups passed twice to fairpredictor both as part of "
+                                "the dataset and as an argument. "
+                                "The argument will be used."))
         # Internal logic differentiates between groups should be recovered from other data
         # i.e. groups = None
         # and there are no groups i.e. groups = False
@@ -418,10 +418,8 @@ class FairPredictor:
             for frontier and updated predictor.
         """
         import matplotlib.pyplot as plt  # noqa: C0415
+        assert self.frontier is not None, 'Call fit before plot_frontier.'
         _guard_predictor_data_match(data, self.predictor)
-        if self.frontier is None:
-            logger.error('Call fit before plot_frontier')
-
         objective1 = objective1 or self.objective1
         objective2 = objective2 or self.objective2
         if not subfig and new_plot:
