@@ -36,6 +36,19 @@ def test_discard():
 
 def test_replace():
     train, val, test = dataset_loader.compas('race', train_proportion=0.66, test_proportion=0.33,
-                                             discard_groups=True, 
+                                             discard_groups=True,
                                              replace_groups={'Hispanic': 'Other', 'Native American': ' Other', 'Asian': 'Other'})
-    assert (train['groups']=='Hispanic').sum()==0
+    assert (train['groups'] == 'Hispanic').sum() == 0
+
+
+def test_all_loaders():
+    dataset_loader.adult()
+    dataset_loader.compas()
+    dataset_loader.compas_audit()
+    dataset_loader.diabetes()
+    dataset_loader.support2()
+    dataset_loader.german()
+    dataset_loader.taiwan_default()
+    dataset_loader.bank_marketing()
+    dataset_loader.student()
+    dataset_loader.myocardial_infarction()

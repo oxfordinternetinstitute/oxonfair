@@ -82,8 +82,12 @@ class partition:
             total_data = total_data.drop(t_name, axis=1)
         target = np.asarray(target).reshape(-1)
         if positive_target:
-            target = target == positive_target
-
+            if callable(positive_target):
+                target = positive_target(target)
+            else:
+                target = target == positive_target
+        assert all(0 <= target), 'target must be binary, or provide positive_target value'
+        assert all(target <= 1), 'target must be binary, or provide positive_target value'
         assert 0 < target.mean() < 1, 'Something is wrong with the dataset. Every target value is the same.'
 
         assert 0 < np.asarray(target).mean() < 1
@@ -112,7 +116,7 @@ class partition:
             target = target[mask]
 
         total_data.reset_index(drop=True)
-        if discard_groups or seperate_groups:
+        if not isinstance(groups, str):
             groups.reset_index(drop=True)
 
         if encoding == 'onehot':
@@ -122,7 +126,7 @@ class partition:
         elif encoding is not None:
             assert encoding is not None, "encoding must be 'onehot', 'ordinal', or None"
 
-        if discard_groups or seperate_groups:
+        if not isinstance(groups, str):
             part = uniform_partition(target, groups, train_prop=train_proportion,
                                      test_prop=test_proportion, seed=seed)
             train_groups = groups.iloc[part == 0]
@@ -167,7 +171,7 @@ def compas_audit_raw():
     all_data = pd.read_csv('https://github.com/propublica/compas-analysis/raw/master/compas-scores-two-years.csv')
     condensed_data = all_data[['sex', 'race', 'age', 'juv_fel_count', 'juv_misd_count', 'juv_other_count',
                                'priors_count', 'age_cat', 'c_charge_degree', 'decile_score.1',
-                               'v_score_text' 'two_year_recid']].copy()
+                               'v_score_text', 'two_year_recid']].copy()
     return condensed_data, 'two_year_recid', None
 
 
@@ -226,7 +230,7 @@ support2_raw = UCI_raw(880, fix_y=lambda y: y['death'])
 german_raw = UCI_raw(144, pos_y_val=2, fix_X=german_col_names,)
 taiwan_default_raw = UCI_raw(350, fix_X=taiwan_col_names)
 bank_marketing_raw = UCI_raw(222, pos_y_val='yes')
-student_raw = UCI_raw(856)
+student_raw = UCI_raw(856, fix_y=lambda y: y >= 5)
 myocardial_infarction_raw = UCI_raw(579, fix_X=replace_nan, fix_y=lambda y: y['LET_IS'] > 0)
 
 adult = partition(adult_raw, 'sex')
@@ -237,7 +241,7 @@ support2 = partition(support2_raw, 'sex')
 german = partition(german_raw, german_sex)
 taiwan_default = partition(taiwan_default_raw, 'sex')
 bank_marketing = partition(bank_marketing_raw, 'marital')
-student = partition(student_raw, 'sex')
+student = partition(student_raw, 'Sex')
 myocardial_infarction = partition(myocardial_infarction_raw, 'SEX')
 
 german_dict = {
