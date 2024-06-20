@@ -28,7 +28,7 @@ In the terminal type:
 
     pip install oxonfair
 
-By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load standard datasets, without installing `ucimlrepo`. You will have to install `matplotlib` to plot.
+By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will have to install `matplotlib` to plot.
 
 ### Compare with Fairlearn
 
