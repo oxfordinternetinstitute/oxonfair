@@ -4,6 +4,8 @@ OxonFair is an expressive toolkit designed to enforce a wide-range of fairness d
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 It is designed and works for computer vision and NLP problems alongside tabular data.
 
+Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing).
+
 For low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
 
 We support a range of complex classifiers including [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html).
@@ -14,27 +16,27 @@ OxonFair is a modified version of [autogluon.fair](https://github.com/autogluon/
 
 ### Standard install
 
-Download the source of OxonFair and in the source directory run:
+In the terminal type:
 
-    pip install -e .\[full\]
+    pip install 'oxonfair[full]'
 
-This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too excessive, try a minimal install.
+This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too many dependancies, try a minimal install.
 
 ### Minimal install
 
-Download the source of OxonFair and in the source directory run:
+In the terminal type:
 
-    pip install -e .
+    pip install oxonfair
 
-By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load datasets, without installing `ucimlrepo`, and will have to install `matplotlib` to plot.
+By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load standard datasets, without installing `ucimlrepo`. You will have to install `matplotlib` to plot.
 
 ### Compare with Fairlearn
 
-Download the source of OxonFair and in the source directory run:
+In the terminal type:
 
-    pip install -e .\[notebooks\]
+    pip install 'oxonfair[notebooks]'
 
-This will download enough supporting libraries to run all the notebooks.
+This will download enough supporting libraries, including fairlearn, to run all the notebooks.
 
 ### Full install for running the test suite
 
