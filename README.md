@@ -10,7 +10,7 @@ For low-capacity models (e.g., logistic regression over a small number of variab
 
 We support a range of complex classifiers including [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html).
 
-OxonFair is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
+OxonFair is a continuation of early work done at [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
 ## Source install
 
@@ -64,7 +64,7 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
     import xgboost
 
     # Download and partition the adult dataset into training and test datta
-    train_data, _, test_data = dataset_loader.adult('sex', train_ratio=0.7, test_ratio=0.3)
+    train_data, _, test_data = dataset_loader.adult('sex', train_proportion=0.7, test_proportion=0.3)
     # Train an XGBoost classifier on the training set                                              
     predictor = xgboost.XGBClassifier().fit(X=train_data['data'], y=train_data['target'])
 
@@ -173,7 +173,7 @@ For example, a custom implementation of recall can be defined as:
 
     my_recall = gm.GroupMetric(lambda TP, FP, FN, TN: (TP) / (TP + FN), 'Recall')
 
-and then the maximum difference in recall between groups (corresponding to the fairness definition of Equal Opportunity) is provided by calling `my_recall.diff`, and the minimum recall over any group (which can be used to ensure that the recall is above a particular value for every group) is given by `my_recall.min`.
+and then the average difference in recall between groups (corresponding to the fairness definition of Equal Opportunity) is provided by calling `my_recall.diff`, and the minimum recall over any group (which can be used to ensure that the recall is above a particular value for every group) is given by `my_recall.min`.
 
 ### Altering Behavior
 
@@ -200,6 +200,8 @@ If, for example, you wish to optimize F1 without any additional constraints, you
 Note that the default behavior (we should minimize the demographic parity violation, but maximize F1) is inferred from standard usage but can be overwritten by setting the optional parameters `greater_is_better_obj` and `greater_is_better_const` to `True` or `False`.
 
 Where constraints cannot be satisfied, for example, if we require that the F1 score must be above 1.1, `fit` returns the solution closest to satisfying it.
+
+For more examples using fit see [using_fit.md](./using_fit.md).
 
 ### Measuring Behavior
 
