@@ -87,23 +87,19 @@ Evaluate on the test set using
 
 Evaluate fairness using standard metrics with:
 
-    fpred.evalaute_fairness()
+    fpred.evaluate_fairness()
 
-|                                                         |   original |   updated |
-|:--------------------------------------------------------|-----------:|----------:|
-| Class Imbalance                                         |  0.172661  | 0.172661  |
-| Demographic Parity                                      |  0.154614  | 0.0984474 |
-| Disparate Impact                                        |  0.325866  | 0.517006  |
-| Maximal Group Difference in Accuracy                    |  0.111118  | 0.102622  |
-| Maximal Group Difference in Recall                      |  0.146103  | 0.0195962 |
-| Maximal Group Difference in Conditional Acceptance Rate |  0.411181  | 0.255626  |
-| Maximal Group Difference in Acceptance Rate             |  0.03979   | 0.144976  |
-| Maximal Group Difference in Specificity                 |  0.07428   | 0.033638  |
-| Maximal Group Difference in Conditional Rejectance Rate |  0.0351948 | 0.0964846 |
-| Maximal Group Difference in Rejection Rate              |  0.101413  | 0.120799  |
-| Treatment Equality                                      |  0.172428  | 0.28022   |
-| Generalized Entropy                                     |  0.102481  | 0.105529  |
+|                                                 |   original |    updated |
+|:------------------------------------------------|-----------:|-----------:|
+| Statistical Parity                              |  0.157001  | 0.0783781  |
+| Predictive Parity                               |  0.0182043 | 0.092402   |
+| Equal Opportunity                               |  0.170043  | 0.00632223 |
+| Average Group Difference in False Negative Rate |  0.170043  | 0.00632223 |
+| Equalized Odds                                  |  0.126215  | 0.0170495  |
+| Conditional Use Accuracy                        |  0.0526152 | 0.104521   |
+| Average Group Difference in Accuracy            |  0.10703   | 0.104349   |
+| Treatment Equality                              |  0.294522  | 0.131856   |
 
-Call `fpredict.predict( )`, and `fpredict.predict_proba( )` to score new data.
+Call `fpredict.predict()`, and `fpredict.predict_proba()` to score new data.
 
 Once the base predictor has been trained, and the object built, you can use the fair predictor in the same way as with autogluon. See [README.md](./README.md) for details.
