@@ -85,8 +85,17 @@ class FairPredictor:
         # Check if sklearn
         _guard_predictor_data_match(validation_data, predictor)
         self.predictor = predictor
-        if groups is None and not isinstance(validation_data, dict):
-            groups = False
+        if groups is None:
+            if isinstance(validation_data, dict):
+                if isinstance(validation_data.get('groups', None), str):
+                    groups = validation_data['groups']
+            else:
+                groups = False
+        else:
+            if isinstance(validation_data, dict) and validation_data.get('groups', None) is not None:
+                logger.warning(("Groups passed twice to fairpredictor both as part of "
+                                "the dataset and as an argument. "
+                                "The argument will be used."))
         # Internal logic differentiates between groups should be recovered from other data
         # i.e. groups = None
         # and there are no groups i.e. groups = False
@@ -108,11 +117,6 @@ class FairPredictor:
             if groups is None:
                 groups = validation_data.get('groups', False)
                 # Do not update self.groups otherwise this will stick
-            else:
-                if validation_data.get('groups', None) is not None:
-                    logger.warning(("Groups passed twice to fairpredictor both as part of "
-                                    "the dataset and as an argument. "
-                                    "The argument will be used."))
             if conditioning_factor is False:
                 conditioning_factor = validation_data.get('cond_fact', False)
                 # Do not update self.conditioning otherwise this will stick
@@ -414,10 +418,8 @@ class FairPredictor:
             for frontier and updated predictor.
         """
         import matplotlib.pyplot as plt  # noqa: C0415
+        assert self.frontier is not None, 'Call fit before plot_frontier.'
         _guard_predictor_data_match(data, self.predictor)
-        if self.frontier is None:
-            logger.error('Call fit before plot_frontier')
-
         objective1 = objective1 or self.objective1
         objective2 = objective2 or self.objective2
         if not subfig and new_plot:
@@ -964,12 +966,16 @@ def DataDict(target, data, groups=None, conditioning_factor=None) -> dict:
     target = np.asarray(target).reshape(-1)
     out = {'target': target, 'data': data}
     if groups is not None:
-        assert target.shape[0] == groups.shape[0]
-        assert groups.ndim == 1 or (groups.ndim == 2 and groups.shape[1] == 1)
-        out['groups'] = np.asarray(groups).reshape(-1)
+        if not isinstance(groups, str):
+            assert target.shape[0] == groups.shape[0]
+            assert groups.ndim == 1 or (groups.ndim == 2 and groups.shape[1] == 1)
+            out['groups'] = np.asarray(groups).reshape(-1)
+        else:
+            out['groups'] = groups
     if conditioning_factor is not None:
-        assert conditioning_factor.ndim == 1
-        assert target.shape[0] == conditioning_factor.shape[0]
+        if not isinstance(conditioning_factor, str):
+            assert conditioning_factor.ndim == 1
+            assert target.shape[0] == conditioning_factor.shape[0]
         out['cond_fact'] = conditioning_factor
     return out
 

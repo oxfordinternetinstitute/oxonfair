@@ -50,7 +50,7 @@ class partition:
 
     def __call__(self,  groups=None, train_proportion=0.5, test_proportion=0.25, *,
                  seed=None, discard_groups=False, replace_groups=False,
-                 encoding='ordinal', resample=None):
+                 encoding='ordinal', resample=None, seperate_groups=False):
         """Generic code for controling datapartitioning.
         groups: a specification of the column containing group information that can be understood by pandas
         train_proportion: number between 0 and 1 expressing the proportion of the dataset used for training
@@ -61,6 +61,9 @@ class partition:
                     {'Hispanic':'Other', 'Native American':'Other', 'Asian':'Other'}
         encoding: if 'ordinal' or 'onehot' encode data accordingly. If None don't encode.
         resample: override existing resampling. This should be a Resample class.
+        seperate_groups: default False. This indicates if groups should be stored as a seperable human
+                        readable array or kept as a string.
+                         Should be False if you don't want to explicitly pass groups to predict.
         """
         assert groups is not None or self.default_groups is not None
         if groups is None:
@@ -79,8 +82,12 @@ class partition:
             total_data = total_data.drop(t_name, axis=1)
         target = np.asarray(target).reshape(-1)
         if positive_target:
-            target = target == positive_target
-
+            if callable(positive_target):
+                target = positive_target(target)
+            else:
+                target = target == positive_target
+        assert all(0 <= target), 'target must be binary, or provide positive_target value'
+        assert all(target <= 1), 'target must be binary, or provide positive_target value'
         assert 0 < target.mean() < 1, 'Something is wrong with the dataset. Every target value is the same.'
 
         assert 0 < np.asarray(target).mean() < 1
@@ -89,9 +96,14 @@ class partition:
             g_name = groups
             if replace_groups:
                 total_data[groups] = total_data[groups].replace(replace_groups)
-            groups = total_data[groups]
+
+            if seperate_groups:
+                groups = total_data[groups]
+
             if discard_groups:
+                groups = total_data[g_name]
                 total_data = total_data.drop(g_name, axis=1)
+
         else:
             if replace_groups:
                 groups = groups.replace(replace_groups)
@@ -99,32 +111,42 @@ class partition:
         if resample:
             mask = resample(groups, target)
             total_data = total_data[mask]
-            groups = groups[mask]
+            if discard_groups or replace_groups:
+                groups = groups[mask]
             target = target[mask]
 
         total_data.reset_index(drop=True)
-        groups.reset_index(drop=True)
+        if not isinstance(groups, str):
+            groups.reset_index(drop=True)
 
         if encoding == 'onehot':
             total_data = total_data.get_dummies()
         elif encoding == 'ordinal':
             total_data = total_data.apply(LabelEncoder().fit_transform)
         elif encoding is not None:
-            assert encoding is not None, "encoding must be 'onehot', 'ordinal', or 'None'"
+            assert encoding is not None, "encoding must be 'onehot', 'ordinal', or None"
 
-        part = uniform_partition(target, groups, train_prop=train_proportion,
-                                 test_prop=test_proportion, seed=seed)
+        if not isinstance(groups, str):
+            part = uniform_partition(target, groups, train_prop=train_proportion,
+                                     test_prop=test_proportion, seed=seed)
+            train_groups = groups.iloc[part == 0]
+            val_groups = groups.iloc[part == 2]
+            test_groups = groups.iloc[part == 1]
+        else:
+            part = uniform_partition(target, total_data[groups], train_prop=train_proportion,
+                                     test_prop=test_proportion, seed=seed)
+            train_groups = groups
+            val_groups = groups
+            test_groups = groups
+
         train = total_data.iloc[part == 0]
-        train_groups = groups.iloc[part == 0]
         train_y = target[part == 0]
 
         val = total_data.iloc[part == 2]
         val_y = target[part == 2]
-        val_groups = groups.iloc[part == 2]
 
         test = total_data.iloc[part == 1]
         test_y = target[part == 1]
-        test_groups = groups.iloc[part == 1]
 
         train_dict = DataDict(train_y, train, train_groups)
         val_dict = DataDict(val_y, val, val_groups)
@@ -149,7 +171,7 @@ def compas_audit_raw():
     all_data = pd.read_csv('https://github.com/propublica/compas-analysis/raw/master/compas-scores-two-years.csv')
     condensed_data = all_data[['sex', 'race', 'age', 'juv_fel_count', 'juv_misd_count', 'juv_other_count',
                                'priors_count', 'age_cat', 'c_charge_degree', 'decile_score.1',
-                               'v_score_text' 'two_year_recid']].copy()
+                               'v_score_text', 'two_year_recid']].copy()
     return condensed_data, 'two_year_recid', None
 
 
@@ -208,7 +230,7 @@ support2_raw = UCI_raw(880, fix_y=lambda y: y['death'])
 german_raw = UCI_raw(144, pos_y_val=2, fix_X=german_col_names,)
 taiwan_default_raw = UCI_raw(350, fix_X=taiwan_col_names)
 bank_marketing_raw = UCI_raw(222, pos_y_val='yes')
-student_raw = UCI_raw(856)
+student_raw = UCI_raw(856, fix_y=lambda y: y >= 5)
 myocardial_infarction_raw = UCI_raw(579, fix_X=replace_nan, fix_y=lambda y: y['LET_IS'] > 0)
 
 adult = partition(adult_raw, 'sex')
@@ -219,7 +241,7 @@ support2 = partition(support2_raw, 'sex')
 german = partition(german_raw, german_sex)
 taiwan_default = partition(taiwan_default_raw, 'sex')
 bank_marketing = partition(bank_marketing_raw, 'marital')
-student = partition(student_raw, 'sex')
+student = partition(student_raw, 'Sex')
 myocardial_infarction = partition(myocardial_infarction_raw, 'SEX')
 
 german_dict = {

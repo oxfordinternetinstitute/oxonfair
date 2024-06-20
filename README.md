@@ -4,47 +4,55 @@ OxonFair is an expressive toolkit designed to enforce a wide-range of fairness d
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 It is designed and works for computer vision and NLP problems alongside tabular data.
 
+Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing).
+
 For low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
 
 We support a range of complex classifiers including [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html).
 
-OxonFair is a modified version of [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
+OxonFair is a continuation of early work done at [autogluon.fair](https://github.com/autogluon/autogluon-fair) and actively maintained.
 
 ## Source install
 
 ### Standard install
 
-Download the source of OxonFair and in the source directory run:
+In the terminal type:
 
-    pip install -e .\[full\]
+    pip install 'oxonfair[full]'
 
-This will download and install enough code to run any notebooks except those comparing with fairlearn.
-
-### Compare with Fairlearn
-
-Download the source of OxonFair and in the source directory run:
-
-    pip install -e .\[notebooks\]
-
-This will download enough supporting libraries to run all the notebooks.
+This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too many dependancies, try a minimal install.
 
 ### Minimal install
 
-Download the source of OxonFair and in the source directory run:
-    pip install -e .
+In the terminal type:
 
-By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load datasets, without install `ucimlrepo`, and will have to install `matplotlib` to plot.
+    pip install oxonfair
+
+By default, this will only install the necessary dependencies sklearn; pandas; and numpy. You will not be able to load standard datasets, without installing `ucimlrepo`. You will have to install `matplotlib` to plot.
+
+### Compare with Fairlearn
+
+In the terminal type:
+
+    pip install 'oxonfair[notebooks]'
+
+This will download enough supporting libraries, including fairlearn, to run all the notebooks.
 
 ### Full install for running the test suite
 
 Download the source of OxonFair and in the source directory run:
+
     pip install -e .\[tests\]
 
-Now run the [Example Notebook](examples/quickstart_autogluon.ipynb) or try some of the example below.
+You probably don't want to install this unless you're looking to modify the codebase.
 
-For scikit/XGBoost, see [sklearn.md](./sklearn.md) and the [Example Notebook](examples/quickstart_xgboost.ipynb)
+## Examples
 
-For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this [Example Notebook](examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
+Now run the [Example Notebook](./examples/quickstart_autogluon.ipynb) or try some of the example below.
+
+For scikit/XGBoost, see [sklearn.md](./sklearn.md) and the [Example Notebook](./examples/quickstart_xgboost.ipynb)
+
+For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb) and for computer vision, this [Example Notebook](./examples/quickstart_DeepFairPredictor_computer_vision.ipynb)
 
 More demo notebooks are present in the [examples folder](./examples/README.md).
 
@@ -56,7 +64,7 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
     import xgboost
 
     # Download and partition the adult dataset into training and test datta
-    train_data, _, test_data = dataset_loader.adult('sex', train_ratio=0.7, test_ratio=0.3)
+    train_data, _, test_data = dataset_loader.adult('sex', train_proportion=0.7, test_proportion=0.3)
     # Train an XGBoost classifier on the training set                                              
     predictor = xgboost.XGBClassifier().fit(X=train_data['data'], y=train_data['target'])
 
@@ -165,7 +173,7 @@ For example, a custom implementation of recall can be defined as:
 
     my_recall = gm.GroupMetric(lambda TP, FP, FN, TN: (TP) / (TP + FN), 'Recall')
 
-and then the maximum difference in recall between groups (corresponding to the fairness definition of Equal Opportunity) is provided by calling `my_recall.diff`, and the minimum recall over any group (which can be used to ensure that the recall is above a particular value for every group) is given by `my_recall.min`.
+and then the average difference in recall between groups (corresponding to the fairness definition of Equal Opportunity) is provided by calling `my_recall.diff`, and the minimum recall over any group (which can be used to ensure that the recall is above a particular value for every group) is given by `my_recall.min`.
 
 ### Altering Behavior
 
@@ -192,6 +200,8 @@ If, for example, you wish to optimize F1 without any additional constraints, you
 Note that the default behavior (we should minimize the demographic parity violation, but maximize F1) is inferred from standard usage but can be overwritten by setting the optional parameters `greater_is_better_obj` and `greater_is_better_const` to `True` or `False`.
 
 Where constraints cannot be satisfied, for example, if we require that the F1 score must be above 1.1, `fit` returns the solution closest to satisfying it.
+
+For more examples using fit see [using_fit.md](./using_fit.md).
 
 ### Measuring Behavior
 
