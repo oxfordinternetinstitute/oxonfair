@@ -4,6 +4,8 @@ from setuptools import setup
 
 FAIR = "oxonfair"
 
+version = "0.1.9"
+
 PYTHON_REQUIRES = ">=3.8"
 
 
@@ -18,7 +20,7 @@ def create_version_file(*, version):
 def update_version(version, use_file_if_exists=True, create_file=False):
     """
     To release a new stable version on PyPi, simply tag the release on github, and the Github CI will automatically publish
-    a new stable version to PyPi using the configurations in .github/workflows/pypi_release.yml .
+    a new stable version to PyPi using the configurations in .github/workflows/pypi_release.yml. **Currently disabled**.
     You need to increase the version number after stable release, so that the nightly pypi can work properly.
     """
     try:
@@ -99,16 +101,15 @@ def default_setup_args(*, version):
     return setup_args
 
 
-version = "0.2"
-
 install_requires = [
     "numpy>=1.21.4",
     "pandas>=1.2.5",
-    "scikit-learn"
+    "scikit-learn",
+    'ucimlrepo'
 ]
 
 extras_require = dict()
-full_requirements = ['matplotlib', 'autogluon.tabular', 'ucimlrepo', 'torch', 'xgboost']
+full_requirements = ['matplotlib', 'autogluon.tabular', 'torch', 'xgboost']
 notebook_requirements = full_requirements + ['fairlearn']
 test_requirements = notebook_requirements + ["tox", "pytest", "pytest-cov", 'flake8',
                                              'linkcheckmd', 'ipynbcompress']
