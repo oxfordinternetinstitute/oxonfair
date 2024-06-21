@@ -52,7 +52,7 @@ def default_setup_args(*, version):
         name=name,
         version=version,
         author="Governance of Emerging Technologies Programme (Oxford Internet Insitute)",
-        url="https://github.com/ChrisMRuss/oxon-fair/",
+        url="https://github.com/oxfordinternetinstitute/oxonfair",
         description="Toolkit for evaluating and enforcing ML model fairness",
         long_description=long_description,
         long_description_content_type="text/markdown",
@@ -92,10 +92,10 @@ def default_setup_args(*, version):
             "Topic :: Scientific/Engineering :: Image Recognition",
         ],
         project_urls={
-            "Documentation": "https://github.com/ChrisMRuss/oxon-fair/",
-            "Bug Reports": "https://github.com/ChrisMRuss/oxon-fair/issues",
-            "Source": "https://github.com/ChrisMRuss/oxon-fair/",
-            "Contribute!": "https://github.com/ChrisMRuss/oxon-fair/blob/master/CONTRIBUTING.md",
+            "Documentation": "https://github.com/oxfordinternetinstitute/oxonfair",
+            "Bug Reports": "https://github.com/oxfordinternetinstitute/oxonfair/issues",
+            "Source": "https://github.com/oxfordinternetinstitute/oxonfair",
+            "Contribute!": "https://github.com/oxfordinternetinstitute/oxonfair/blob/master/CONTRIBUTING.md",
         },
     )
     return setup_args
