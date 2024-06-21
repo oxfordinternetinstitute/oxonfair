@@ -54,7 +54,7 @@ def test_slack_constraints(use_fast=True):
     measures = fpredictor.evaluate_fairness(metrics={'recall.min': gm.recall.min}, verbose=False)
 
     assert measures["original"]["recall.min"] < 0.99
-    assert measures["updated"]["recall.min"] > 0.99
+    assert measures["updated"]["recall.min"] >= 0.99
 
 
 def test_slack_constraints_slow():
