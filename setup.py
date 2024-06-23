@@ -109,8 +109,8 @@ install_requires = [
 ]
 
 extras_require = dict()
-full_requirements = ['matplotlib', 'autogluon.tabular', 'torch', 'xgboost']
-notebook_requirements = full_requirements + ['fairlearn']
+full_requirements = ['matplotlib', 'autogluon.tabular', 'torch', 'xgboost', 'jupyterlab']
+notebook_requirements = full_requirements + ['fairlearn', 'jupyterlab']
 test_requirements = notebook_requirements + ["tox", "pytest", "pytest-cov", 'flake8',
                                              'linkcheckmd', 'ipynbcompress']
 
