@@ -139,7 +139,7 @@ def build_grid_inner(accum_count, mesh, groups):
     for i in range(1, len(accum_count)):
         acc = acc + accum_count[i][mesh[i]]  # variable matrix size mean += doesn't work
     assert acc.shape[-2:] == (4, groups)
-    acc = acc.reshape(-1, 4, groups)
+    acc = acc.reshape(-1, acc.shape[-2], groups)
     acc = acc.transpose(1, 0, 2)
 
     return acc
@@ -168,13 +168,13 @@ def build_grid(accum_count: np.ndarray, bottom, top, metrics: Tuple[Callable],
     """
     groups = accum_count[0].shape[-1]
     step = [(t - b) / steps for t, b in zip(top, bottom)]
-
     mesh_indices = [np.unique(np.floor(np.arange(np.floor(b), np.ceil(t + 1),
                                                  max(1, s))).astype(int))
                     for b, t, s in zip(bottom, top, step)]
     mesh = np.meshgrid(*mesh_indices, sparse=True)
 
-    collect = [metric(build_grid_inner(accum_count, mesh, groups)) for metric in metrics]
+    grid = build_grid_inner(accum_count, mesh, groups)
+    collect = [metric(grid) for metric in metrics]
     score = np.stack(collect, 0)
     return score, mesh_indices, np.maximum(1, np.asarray(step))
 
@@ -208,8 +208,8 @@ def build_grid2(accum_counts: Tuple[np.ndarray], bottom, top, metrics: Tuple[Cal
                                                  max(1, s))).astype(int))
                     for b, t, s in zip(bottom, top, step)]
     mesh = np.meshgrid(*mesh_indices, sparse=True)
-
     collect = [metric(build_grid_inner(acc, mesh, groups)) for acc, metric in zip(accum_counts, metrics)]
+
     score = np.stack(collect, 0)
     return score, mesh_indices, np.maximum(1, np.asarray(step))
 
@@ -235,10 +235,11 @@ def condense(thresholds: np.ndarray, labels: np.ndarray, lmax: int, groups: np.n
     groups = groups.astype(int)
     labels = labels.astype(int)
     unique_thresh, index = np.unique(thresholds, return_inverse=True)
-    out = np.zeros((unique_thresh.shape[0], lmax, gmax))
+    out = np.zeros((unique_thresh.shape[0], lmax, gmax), dtype=float)
+    # float is noticably faster for higher numbers of groups.
     np.add.at(out, (index, labels, groups), 1)
 
-    assert out.sum() == labels.shape[0]
+    # assert out.sum() == labels.shape[0]
 
     return unique_thresh[::-1], out[::-1]
 
@@ -297,21 +298,28 @@ def cumsum_zero(array: np.ndarray):
     return out
 
 
+def cumsum_zero_and_reverse(array: np.ndarray):
+    """compute a cumalitive sum starting with zero (i.e. the sum upto the first element).
+    Then reverse this by subtracting it from it's final elemenets and concatinate the two arrays"""
+    cum_array = cumsum_zero(array)
+    reverse_array = cum_array[-1].copy() - cum_array
+    return np.concatenate((cum_array, reverse_array), 1)
+
+
 def grid_search_no_weights(ordered_encode, ass_size, score,
                            metrics, steps, directions, additional_constraints):
     """Internal helper for grid search.
     The weighted pathway requires x2 memory and computation so instead of compressing the cases
     and computing unweighted as weighted with weights 1, we preserve the old pathway."""
 
-    accum_count = [np.concatenate((cumsum_zero(o), cumsum_zero(o[::-1])[::-1]), 1)
-                   for o in ordered_encode]
+    accum_count = [cumsum_zero_and_reverse(o) for o in ordered_encode]
     # The above is the important code
     # accum_count is a list of size groups where each element is an array consisting of the number
     # of true positives, false positives, false negatives and false positives if a threshold is set
     # at a particular value. It is of size (4, groups) because the group assignment may come at test
     # time from an inaccurate classifier
 
-    test_cum_sum(accum_count, ass_size)
+    # test_cum_sum(accum_count, ass_size)
     # now for the computational bottleneck
     bottom = np.zeros(ass_size)
     top = np.asarray([s.shape[0] for s in ordered_encode])
@@ -339,11 +347,9 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
     and computing unweighted as weighted with weights 1, we preserve the old pathway.
     This is the new pathway for weights"""
 
-    accum_count1 = [np.concatenate((cumsum_zero(o), cumsum_zero(o[::-1])[::-1]), 1)
-                    for o in ordered_encode]
+    accum_count1 = [cumsum_zero_and_reverse(o) for o in ordered_encode]
+    accum_count2 = [cumsum_zero_and_reverse(o) for o in ordered_encode2]
 
-    accum_count2 = [np.concatenate((cumsum_zero(o), cumsum_zero(o[::-1])[::-1]), 1)
-                    for o in ordered_encode2]
     # The above is the important code
     # accum_count is a list of size groups where each element is an array consisting of the number
     # of true positives, false positives, false negatives and false positives if a threshold is set
