@@ -66,7 +66,16 @@ class BaseGroupMetric:
                     "Only one argument passed to group metric, but the first dimension is not 4."
                 )
             return args[0][3], args[0][2], args[0][1], args[0][0]
-            # N.B. order reversed
+        if len(args) == 2:
+            if args[0].shape[0] != 2:
+                logger.error(
+                    "Two arguments passed to group metric, but the first dimension is not 2."
+                )
+            if args[1].shape[0] != 2:
+                logger.error(
+                    "Two argument passed to group metric, but the first dimension is not 2."
+                )
+            return args[1][1], args[1][0], args[0][1], args[0][0]
         if len(args) != 3 and len(args) != 4:
             logger.error(
                 "Group metrics can take either one, three, or four broadcast arrays"
