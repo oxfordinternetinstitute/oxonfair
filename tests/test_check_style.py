@@ -3,6 +3,8 @@ import warnings
 from subprocess import Popen, PIPE, check_call
 import linkcheckmd as lc
 import glob
+# Owing to dependency issues with github this file is excluded from the tests.
+# run pip install nbtest before running test_run_notebooks_without_errors
 
 
 def test_check_style_codebase():
@@ -59,6 +61,7 @@ def test_md_links():
 
 
 def test_run_notebooks_without_errors():
+    "run pip install nbtest before running this test"
     from ipynbcompress import compress
     check_call(['pytest', '--nbmake', '-n=auto', '--nbmake-timeout=500', 'examples'])
     # Now compress notebooks because running test makes them too large
