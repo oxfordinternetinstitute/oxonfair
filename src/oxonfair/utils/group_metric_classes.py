@@ -184,9 +184,12 @@ class GroupRatio(BaseGroupMetric):
     def __call__(self, *args: np.ndarray) -> np.ndarray:
         array = self.build_array(args)
         val = self.func(*array)
-        broadcast = val[:, np.newaxis, :] / np.maximum(1e-12, val[:, :, np.newaxis])
-        trunc = np.minimum(broadcast, 1.0/np.maximum(1e-12, broadcast))
-        collate = (trunc.sum(1).sum(1)-trunc.shape[1]) / (val.shape[1] * (val.shape[1] - 1))
+        broadcast = val[:, np.newaxis, :] / val[:, :, np.newaxis]
+        trunc = np.minimum(broadcast, 1.0/broadcast)
+        trunc[~np.isfinite(trunc)] = 1
+        idx = np.arange(trunc.shape[-1])
+        trunc[:, idx, idx] = 0
+        collate = trunc.sum(1).sum(1) / (val.shape[1] * (val.shape[1] - 1))
         return collate
 
 
