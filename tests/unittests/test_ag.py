@@ -190,7 +190,6 @@ def test_recall_diff_inferred(use_fast=True):
 
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    
     assert measures["updated"]["recall.diff"] < 0.001
 
     # Prove that sex isn't being used by dropping it and reevaluating.
