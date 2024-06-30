@@ -212,7 +212,7 @@ def test_normalized_classifier(fast=True):
     assert np.isclose(response.sum(1), 1).all()
 
     response2 = fpred.predict_proba(test_data)
-    assert (response.max(1) == response2.max(1)).all()
+    assert (np.argmax(response,1) == np.argmax(response2,1)).all()
 
 
 def test_normalized_classifier_slow():

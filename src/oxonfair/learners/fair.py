@@ -738,16 +738,16 @@ class FairPredictor:
             tmp = np.zeros_like(proba)
             cache = self.offset[self.infered_to_hard(onehot)]
             if force_normalization:
-                tmp[:, 1] = np.max(cache, 0)
-                tmp[:, 0] = np.max(-cache, 0)
+                tmp[:, 1] = np.maximum(cache, 0)
+                tmp[:, 0] = np.maximum(-cache, 0)
             else:
                 tmp[:, 1] = cache
         else:
             tmp2 = onehot.dot(self.offset)
             if force_normalization:
                 tmp = np.zeros_like(proba)
-                tmp[:, 1] = np.max(tmp2[:, 1]-tmp2[:, 0], 0)
-                tmp[:, 0] = np.max(tmp2[:, 0]-tmp2[:, 1], 0)
+                tmp[:, 1] = np.maximum(tmp2[:, 1] - tmp2[:, 0], 0)
+                tmp[:, 0] = np.maximum(tmp2[:, 0] - tmp2[:, 1], 0)
             else:
                 tmp = tmp2
         if self.round is not False:
