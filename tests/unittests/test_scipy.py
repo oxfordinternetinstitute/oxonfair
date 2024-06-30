@@ -1,8 +1,10 @@
 """Tests for FairPredictor"""
 
 import pandas as pd
+import sklearn.ensemble
 import sklearn.tree
 import oxonfair as fair
+import numpy as np
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
 
@@ -13,7 +15,7 @@ try:
 except ModuleNotFoundError:
     PLT_EXISTS = False
 
-classifier_type = sklearn.tree.DecisionTreeClassifier
+classifier_type = sklearn.ensemble.RandomForestClassifier
 
 train_data = pd.read_csv("https://autogluon.s3.amazonaws.com/datasets/Inc/train.csv")
 test_data = pd.read_csv("https://autogluon.s3.amazonaws.com/datasets/Inc/test.csv")
@@ -181,7 +183,7 @@ def test_pathologoical2(use_fast=True):
 
 
 def test_recall_diff(use_fast=True):
-    """Maximize accuracy while enforcing weak equalized odds,
+    """Maximize accuracy while enforcing weak equal opportunity,
     such that the difference in recall between groups is less than 2.5%
     This also tests the sign functionality on constraints and the objective"""
 
@@ -334,3 +336,22 @@ def test_recall_diff_inferred_slow():
 
 def test_recall_diff_inferred_hybrid():
     test_recall_diff_inferred('hybrid')
+
+
+def test_normalized_classifier(fast=True):
+    fpred = FairPredictor(predictor, val_dict, 'sex_ Female', use_fast=fast)
+    fpred.fit(gm.accuracy, gm.demographic_parity, 0.02)
+    response = fpred.predict_proba(test_dict['data'], force_normalization=True)
+    assert (response >= 0).all().all()
+    assert np.isclose(response.sum(1), 1).all()
+
+    response2 = fpred.predict_proba(test_dict['data'])
+    assert (response.max(1) == response2.max(1)).all()
+
+
+def test_normalized_classifier_slow():
+    test_normalized_classifier(False)
+
+
+def test_normalized_classifier_hybrid():
+    test_normalized_classifier('hybrid')
