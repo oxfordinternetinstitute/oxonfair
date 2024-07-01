@@ -74,8 +74,8 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
     weights = initial_weights.T.copy()
     weights = weights.reshape(weights.shape[0], -1)  # handle both cases.
     front *= directions[:front.shape[1]]
-    # drop all Nans
-    mask = np.logical_not(np.isnan(front).any(1))
+    # drop all Nans/Inf
+    mask = np.isfinite(front).any(1)
     front = front[mask]
     weights = weights[mask]
     # drop all points violating additional constraints.

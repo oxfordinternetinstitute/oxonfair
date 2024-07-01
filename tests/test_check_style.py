@@ -3,7 +3,7 @@ import warnings
 from subprocess import Popen, PIPE, check_call
 import linkcheckmd as lc
 import glob
-# Owing to dependency issues with github this file is excluded from the tests.
+# Owing to dependency issues with github actions this file is excluded from the tests.
 # run pip install nbtest before running test_run_notebooks_without_errors
 
 

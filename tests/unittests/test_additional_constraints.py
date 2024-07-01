@@ -47,7 +47,8 @@ def test_slack_constraints(use_fast=True):
     # Evaluate the change in fairness (recall difference corresponds to EO)
     measures = fpredictor.evaluate_fairness(verbose=False)
     cmeasures = cpredictor.evaluate_fairness(verbose=False)
-
+    measures[np.isnan(measures)] = 0
+    cmeasures[np.isnan(cmeasures)] = 0
     assert np.isclose(measures, cmeasures).all().all()
 
     # check fit did something

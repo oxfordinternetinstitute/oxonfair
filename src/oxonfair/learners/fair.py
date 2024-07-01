@@ -695,7 +695,7 @@ class FairPredictor:
             out = pd.concat([original, updated], keys=['original', 'updated'])
         return out
 
-    def predict_proba(self, data, *, transform_features=True):
+    def predict_proba(self, data, *, transform_features=True, force_normalization=False):
         """Duplicates the functionality of predictor.predict_proba for fairpredictor.
         parameters
         ----------
@@ -704,6 +704,7 @@ class FairPredictor:
         ------
         a  pandas array of scores. Note, these scores are not probabilities, and not guarenteed to
         be non-negative or to sum to 1.
+        To make them positive and sum to 1 use force_normalization=True
         """
         if self.groups is None and self.inferred_groups is False:
             _guard_predictor_data_match(data, self.predictor)
@@ -735,12 +736,31 @@ class FairPredictor:
                 onehot = call_or_get_proba(self.inferred_groups, data)
         if self.use_fast is True:
             tmp = np.zeros_like(proba)
-            tmp[:, 1] = self.offset[self.infered_to_hard(onehot)]
+            cache = self.offset[self.infered_to_hard(onehot)]
+            if force_normalization:
+                tmp[:, 1] = np.maximum(cache, 0)
+                tmp[:, 0] = np.maximum(-cache, 0)
+            else:
+                tmp[:, 1] = cache
         else:
-            tmp = onehot.dot(self.offset)
+            tmp2 = onehot.dot(self.offset)
+            if force_normalization:
+                tmp = np.zeros_like(proba)
+                tmp[:, 1] = np.maximum(tmp2[:, 1] - tmp2[:, 0], 0)
+                tmp[:, 0] = np.maximum(tmp2[:, 0] - tmp2[:, 1], 0)
+            else:
+                tmp = tmp2
         if self.round is not False:
             proba = np.around(proba / self.round) * self.round
         proba += tmp
+        if force_normalization:
+            sum = proba.sum(1)
+            if isinstance(proba, pd.DataFrame):
+                proba[proba.columns[0]] /= sum
+                proba[proba.columns[1]] /= sum
+            else:
+                proba /= sum[:, np.newaxis]
+
         return proba
 
     def predict(self, data, *, transform_features=True) -> pd.Series:

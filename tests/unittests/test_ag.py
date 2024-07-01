@@ -13,6 +13,7 @@ except ModuleNotFoundError:
 import oxonfair as fair
 from oxonfair import FairPredictor
 from oxonfair.utils import group_metrics as gm
+import numpy as np
 
 
 def test_base_functionality():
@@ -190,7 +191,6 @@ def test_recall_diff_inferred(use_fast=True):
 
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    
     assert measures["updated"]["recall.diff"] < 0.001
 
     # Prove that sex isn't being used by dropping it and reevaluating.
@@ -202,3 +202,22 @@ def test_recall_diff_inferred(use_fast=True):
 
 def test_recall_diff_inferred_slow():
     test_recall_diff_inferred(False)
+
+
+def test_normalized_classifier(fast=True):
+    fpred = FairPredictor(predictor, train_data, 'sex', use_fast=fast)
+    fpred.fit(gm.accuracy, gm.demographic_parity, 0.02)
+    response = fpred.predict_proba(test_data, force_normalization=True)
+    assert (response >= 0).all().all()
+    assert np.isclose(response.sum(1), 1).all()
+
+    response2 = fpred.predict_proba(test_data)
+    assert (np.argmax(response,1) == np.argmax(response2,1)).all()
+
+
+def test_normalized_classifier_slow():
+    test_normalized_classifier(False)
+
+
+def test_normalized_classifier_hybrid():
+    test_normalized_classifier('hybrid')
