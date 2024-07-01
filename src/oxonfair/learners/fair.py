@@ -1077,7 +1077,7 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
             use_fast = 'hybrid'
     if use_actual_groups is True:
         fpred = FairPredictor(capped_identity, val_data, threshold=0, use_fast=use_fast, logit_scaling=logit_scaling)
-    if use_actual_groups == 'single_threshold':
+    elif use_actual_groups == 'single_threshold':
         fpred = FairPredictor(capped_identity, val_data, inferred_groups=single_threshold,
                               threshold=0, use_fast=use_fast, logit_scaling=False)
     else:
