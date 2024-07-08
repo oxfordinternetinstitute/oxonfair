@@ -62,9 +62,12 @@ def test_md_links():
 
 def test_run_notebooks_without_errors():
     "run pip install nbtest before running this test"
-    from ipynbcompress import compress
     check_call(['pytest', '--nbmake', '-n=auto', '--nbmake-timeout=500', 'examples'])
+
+
+def test_compress_notebooks():
     # Now compress notebooks because running test makes them too large
     # This is not really a test, hijacking the test suite to build.
+    from ipynbcompress import compress
     for file in glob.glob('./examples/*.ipynb'):
         compress(file)

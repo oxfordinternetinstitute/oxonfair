@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import oxonfair as fair
+from sklearn.ensemble import RandomForestClassifier
 from oxonfair.utils import group_metrics as gm
 from oxonfair.utils import conditional_group_metrics as cgm
 
@@ -14,6 +15,9 @@ try:
 except ModuleNotFoundError:
     AUTOGLUON_EXISTS = False
 # drop other
+
+train_d, val_d, test_d = fair.dataset_loader.adult()
+forest = RandomForestClassifier().fit(y=train_d['target'], X=train_d['data'])
 
 
 def test_conditional_metrics():
@@ -120,3 +124,26 @@ def test_class_slow():
 def test_class_hybrid():
     "check hybrid pathway"
     test_class('hybrid')
+
+
+def test_sklearn(use_fast=True):
+    fpredictor = fair.FairPredictor(forest, test_d,
+                                    conditioning_factor=test_d['data']["race"], use_fast=use_fast)
+    fpredictor.fit(gm.accuracy, gm.demographic_parity, 0.02)
+    fpredictor.fit(gm.balanced_accuracy, cgm.pos_pred_rate.diff, 0.02)
+    fpredictor.plot_frontier()
+    fpredictor.evaluate_fairness()
+    score = fpredictor.evaluate_fairness(metrics=cgm.cond_disparities, verbose=False)
+    score["updated"]["pos_pred_rate_diff"] < 0.02
+    fpredictor.evaluate_groups()
+    fpredictor.evaluate_groups(metrics=cgm.cond_measures)
+
+
+def test_sklearn_slow():
+    "check slow pathway"
+    test_sklearn(False)
+
+
+def test_sklearn_hybrid():
+    "check hybrid pathway"
+    test_sklearn('hybrid')

@@ -117,7 +117,7 @@ class FairPredictor:
             if groups is None:
                 groups = validation_data.get('groups', False)
                 # Do not update self.groups otherwise this will stick
-            if conditioning_factor is False:
+            if conditioning_factor is None:
                 conditioning_factor = validation_data.get('cond_fact', False)
                 # Do not update self.conditioning otherwise this will stick
             else:
@@ -132,7 +132,7 @@ class FairPredictor:
         # We use _internal_groups as a standardized argument that is always safe to pass
         # to functions expecting a vector
         self._internal_groups = self.groups_to_numpy(groups, self.validation_data)
-
+        self._internal_conditioning_factor = self.cond_fact_to_numpy(conditioning_factor, self.validation_data)
         if self._internal_groups.shape[0] != validation_labels.shape[0]:
             logger.error('The size of the groups does not match the dataset size')
 
@@ -330,7 +330,7 @@ class FairPredictor:
         self.objective1 = objective1
         self.objective2 = objective2
         objectives = (objective1, objective2) + tuple((a[0] for a in additional_constraints))
-        factor = self.cond_fact_to_numpy(self.conditioning_factor, self.validation_data)
+
         direction = np.ones(2 + len(additional_constraints))
         values = np.ones(len(additional_constraints))
         if greater_is_better_obj1 is False:
@@ -356,7 +356,8 @@ class FairPredictor:
             proba = np.around(self.proba / tol) * tol
 
         def call_slow(existing_weights=None):
-            fix_obj = [fix_groups_and_conditioning(obj, self._internal_groups, factor) for obj in objectives]
+            fix_obj = [fix_groups_and_conditioning(obj, self._internal_groups,
+                                                   self._internal_conditioning_factor, self.y_true) for obj in objectives]
             if grid_width is False:
                 gw = 18
             else:
@@ -379,7 +380,7 @@ class FairPredictor:
                                                  self.infered_to_hard(self._val_thresholds),
                                                  self._internal_groups,
                                                  steps=min(30, (30**5)**(1 / self._val_thresholds.shape[1])),
-                                                 directions=direction, factor=factor,
+                                                 directions=direction, factor=self._internal_conditioning_factor,
                                                  additional_constraints=values)
 
         if self.use_fast == 'hybrid':
@@ -470,13 +471,13 @@ class FairPredictor:
                 else:
                     val_thresholds = call_or_get_proba(self.inferred_groups, data)
         if self.use_fast is not True:
-            factor = self.cond_fact_to_numpy(self.conditioning_factor, data)
+            factor = self._internal_conditioning_factor
             if _needs_groups(objective1):
                 objective1 = fix_groups_and_conditioning(objective1,
-                                                         self.groups_to_numpy(groups, data), factor)
+                                                         self.groups_to_numpy(groups, data), factor, self.y_true)
             if _needs_groups(objective2):
                 objective2 = fix_groups_and_conditioning(objective2,
-                                                         self.groups_to_numpy(groups, data), factor)
+                                                         self.groups_to_numpy(groups, data), factor, self.y_true)
 
             front1 = fair_frontier.compute_metric(objective1, labels, proba,
                                                   val_thresholds, self.frontier[1])
@@ -865,6 +866,16 @@ def inferred_attribute_builder(train, target, protected, *args, **kwargs):
     return target_predictor, protected_predictor
 
 
+def groups_to_masks(groups):
+    "helper function to convert a sequence of groups to a 1-hot encoded set of masks"
+    groups = np.asarray(groups)
+    unique = np.unique(groups)
+    mask = np.zeros((unique.shape[0], groups.shape[0]))
+    for i, group_name in enumerate(unique):
+        mask[i] = groups == group_name
+    return mask.T
+
+
 def fix_groups(metric, groups):
     """fixes the choice of groups so that BaseGroupMetrics can be passed as Scorable analogs to the
     slow pathway.
@@ -883,7 +894,7 @@ def fix_groups(metric, groups):
        (AUTOGLUON_EXISTS and isinstance(metric, Scorer) and (metric.needs_pred is False))):
         return metric
 
-    groups = np.asarray(groups)
+    groups = groups_to_masks(groups)
 
     def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
         return metric(y_true, y_pred, groups)
@@ -915,7 +926,7 @@ def fix_conditioning(metric: BaseGroupMetric, conditioning_factor):
     return new_metric
 
 
-def fix_groups_and_conditioning(metric, groups, conditioning_factor):
+def fix_groups_and_conditioning(metric, groups, conditioning_factor, y_true):
     """fixes the choice of groups and conditioning factor so that BaseGroupMetrics can be passed as
     Scorable analogs to the slow pathway.
 
@@ -935,9 +946,11 @@ def fix_groups_and_conditioning(metric, groups, conditioning_factor):
 
     conditioning_factor = np.asarray(conditioning_factor)
     groups = np.asarray(groups)
+    weights = metric.cond_weights(conditioning_factor, groups, y_true)
+    groups = groups_to_masks(groups)
 
     def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
-        return metric(y_true, y_pred, groups, conditioning_factor)
+        return metric(y_true, y_pred, groups, weights)
     return new_metric
 
 
