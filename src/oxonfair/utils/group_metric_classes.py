@@ -61,61 +61,56 @@ class BaseGroupMetric:
             4  (entries x groups) sized arrays, where entries is 1 if args consisted of 3 vectors.
         """
         if len(args) == 1:
-            if args[0].shape[0] != 4:
-                logger.error(
-                    "Only one argument passed to group metric, but the first dimension is not 4."
-                )
+            assert args[0].shape[0] == 4, "Only one argument passed to group metric, but the first dimension is not 4."
             return args[0][3], args[0][2], args[0][1], args[0][0]
         if len(args) == 2:
-            if args[0].shape[0] != 2:
-                logger.error(
-                    "Two arguments passed to group metric, but the first dimension is not 2."
-                )
-            if args[1].shape[0] != 2:
-                logger.error(
-                    "Two argument passed to group metric, but the first dimension is not 2."
-                )
+            assert args[0].shape[0] == 2, "Two arguments passed to group metric, but the first dimension is not 2."
+            assert args[1].shape[0] == 2, "Two arguments passed to group metric, but the first dimension is not 2."
             return args[1][1], args[1][0], args[0][1], args[0][0]
-        if len(args) != 3 and len(args) != 4:
-            logger.error(
-                "Group metrics can take either one, three, or four broadcast arrays"
-            )
+        assert len(args) <= 4, "Group metrics can only take up to 4 arrays as input"
 
-        if len(args) == 4 and self.cond_weights is None:
-            logger.error(
-                """Metric called with four inputs, indicating that we should condition,
-                but no conditioning function provided."""
-            )
+        assert not (len(args) == 4 and self.cond_weights is None), ("Metric called with four inputs, indicating that we should "
+                                                                    "condition but no conditioning function provided.")
 
         y_true: np.ndarray = args[0].astype(int)
         y_pred: np.ndarray = args[1].astype(int)
         groups: np.ndarray = args[2]
         if len(args) == 4:
-            weights = self.cond_weights(args[3], groups, y_true)
+            if groups.ndim == 2:
+                weights = args[3]
+            # if groups is a mask, weights must also be precomputed.
+            else:
+                weights = self.cond_weights(args[3], groups, y_true)
         else:
             weights = False
 
-        assert y_true.size == y_pred.size == groups.size, ("Inputs to group_metric are of different sizes. "
-                                                           "Make sure that all variables are ordinal encoded and not one-hot.")
+        assert y_true.size == y_pred.size == groups.shape[0], ("Inputs to group_metric are of different length. "
+                                                               "Make sure that all variables are ordinal encoded and not one-hot.")
         t_pos = y_true * y_pred
         f_pos = (1 - y_true) * y_pred
         f_neg = y_true * (1 - y_pred)
         t_neg = (1 - y_true) * (1 - y_pred)
-        unique = np.unique(groups)
-        out = np.zeros((4, 1, unique.shape[0]))
-        for i, group_name in enumerate(unique):
-            mask = groups == group_name
-            if weights is False:
-                out[0, :, i] = t_pos[mask].sum()
-                out[1, :, i] = f_pos[mask].sum()
-                out[2, :, i] = f_neg[mask].sum()
-                out[3, :, i] = t_neg[mask].sum()
-            else:
-                w = weights[mask]
-                out[0, :, i] = t_pos[mask].dot(w)
-                out[1, :, i] = f_pos[mask].dot(w)
-                out[2, :, i] = f_neg[mask].dot(w)
-                out[3, :, i] = t_neg[mask].dot(w)
+        if weights is not False:
+            t_pos = t_pos * weights
+            f_pos = f_pos * weights
+            f_neg = f_neg * weights
+            t_neg = t_neg * weights
+
+        if groups.ndim == 2:
+            out = np.zeros((4, 1, groups.shape[1]))
+            out[0, 0] = t_pos.dot(groups)
+            out[1, 0] = f_pos.dot(groups)
+            out[2, 0] = f_neg.dot(groups)
+            out[3, 0] = t_neg.dot(groups)
+        else:
+            unique = np.unique(groups)
+            out = np.zeros((4, 1, unique.shape[0]))
+            for i, group_name in enumerate(unique):
+                mask = groups == group_name
+                out[0, 0, i] = t_pos[mask].sum()
+                out[1, 0, i] = f_pos[mask].sum()
+                out[2, 0, i] = f_neg[mask].sum()
+                out[3, 0, i] = t_neg[mask].sum()
         return out[0], out[1], out[2], out[3]
 
     def clone(self, new_name: str, cond_weights=False):
@@ -400,7 +395,7 @@ class ConditionalWeighting:
         self, conditioning_factor: np.array, groups: np.array, y_true: np.array
     ) -> np.array:
         assert conditioning_factor.shape == y_true.shape
-        assert groups.shape == y_true.shape
+        assert groups.shape[0] == y_true.shape[0]
         weights = np.zeros_like(y_true, dtype=float)
         uniq_f = np.unique(conditioning_factor)
         uniq_g = np.unique(groups)

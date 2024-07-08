@@ -4,7 +4,7 @@ from setuptools import setup
 
 FAIR = "oxonfair"
 
-version = "0.1.9.5"
+version = "0.2.0"
 
 PYTHON_REQUIRES = ">=3.8"
 

@@ -45,25 +45,32 @@ def compute_metrics(metrics: Sequence[Callable], y_true: np.ndarray, proba: np.n
         then select the max and compute a fairness metric """
     scores = np.zeros((len(metrics), weights.shape[-1]))
     y_true = np.asarray(y_true)
+    assert weights[:, 1, :].sum() == 0
+    weights = weights[:, 0, :]
+    proba = proba[:, 0] - proba[:, 1]
+
     threshold_assignment = np.asarray(threshold_assignment)
 
     pass_scores = [(isinstance(metric, ScorerRequiresContPred) or
                    (AUTOGLUON_EXISTS and isinstance(metric, Scorer) and (metric.needs_pred is False)))
                    for metric in metrics]
     # Preallocate because this next loop is the system bottleneck
-    tmp = np.empty((threshold_assignment.shape[0], weights.shape[1]), dtype=threshold_assignment.dtype)
-    diff = np.empty(threshold_assignment.shape[0], dtype=threshold_assignment.dtype)
-    pred = np.empty(threshold_assignment.shape[0], dtype=int)
+    tmp = np.empty((threshold_assignment.shape[0],), dtype=threshold_assignment.dtype)
+    # diff = np.empty(threshold_assignment.shape[0], dtype=threshold_assignment.dtype)
+    # pred = np.empty(threshold_assignment.shape[0], dtype=int)
     for i in range(weights.shape[-1]):
-        np.dot(threshold_assignment, weights[:, :, i], tmp)
-        tmp += proba
+        threshold_assignment.dot(weights[:, i], out=tmp)
+        tmp += proba  # [:, np.newaxis]
+        pred = (tmp <= 0)
+
+        # np.dot(threshold_assignment, weights[:, i], tmp)
+        # tmp += proba
         for j, metric in enumerate(metrics):
             if pass_scores[j] is False:
-                np.argmax(tmp, -1, pred)
                 scores[j, i] = metric(y_true, pred)[0]
             else:
-                np.subtract(tmp[:, 1], tmp[:, 0], diff)
-                scores[j, i] = metric(y_true, diff)
+                # np.subtract(tmp[:, 1], tmp[:, 0], diff)
+                scores[j, i] = metric(y_true, tmp)
     return scores
 
 
