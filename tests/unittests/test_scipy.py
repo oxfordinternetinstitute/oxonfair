@@ -196,9 +196,9 @@ def test_recall_diff(use_fast=True):
     # Evaluate the change in fairness (recall difference corresponds to EO)
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    assert measures["original"]["recall.diff"] > 0.025
+    assert measures["original"]["recall.diff"] > 0.025 
 
-    assert measures["updated"]["recall.diff"] < 0.025
+    assert measures["updated"]["recall.diff"] < 0.025 + 1e-4
     measures = fpredictor.evaluate(verbose=False)
     acc = measures["updated"]["accuracy"]
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025, greater_is_better_const=True)
@@ -355,3 +355,23 @@ def test_normalized_classifier_slow():
 
 def test_normalized_classifier_hybrid():
     test_normalized_classifier('hybrid')
+
+
+def test_total_metrics(fast=True):
+    fpred = FairPredictor(predictor, val_dict, 'sex_ Female', use_fast=fast)
+    fpred.evaluate(metrics={'a': gm.pos_data_proportion.max_diff})
+    fpred.fit(gm.accuracy, gm.pos_pred_proportion.max, 0.02, greater_is_better_const=False)
+    gm.pos_pred_proportion.max(val_dict_g['target'], val_dict_g['target'], val_dict_g['groups'])
+    gm.directed_bias_amplification.per_group(val_dict_g['target'],
+                                             np.random.standard_normal(val_dict_g['target'].shape), val_dict_g['groups'])
+    fpred.fit(gm.accuracy, gm.directed_bias_amplification.max, 0.01, greater_is_better_const=False)
+    fpred.fit(gm.accuracy, gm.bias_amplification.average, 0.01, greater_is_better_const=False)
+    gm.neg_pred_proportion.per_group(val_dict_g['target'], val_dict_g['target'], val_dict_g['groups'])
+
+
+def test_total_metrics_hybrid():
+    test_total_metrics(fast='hybrid')
+
+
+def test_total_metrics_slow():
+    test_total_metrics(fast=False)

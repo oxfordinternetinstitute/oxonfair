@@ -76,7 +76,7 @@ mcc = GroupMetric(
 )
 
 bias_amplification = GroupMetric(lambda TP, FP, FN, TN: np.abs(FN - FP)/(TP + FP + FN + TN),
-                                 'Bias amplification', False)
+                                 'Absolute Bias Amplification', False)
 # absolute metric based on the delta a_t term from directional bias amplification
 # see: https://proceedings.mlr.press/v139/wang21t/wang21t.pdf
 
@@ -189,3 +189,59 @@ rate_metrics = {
 }
 
 default_fairness_measures = verma_metrics
+
+# Complex fairness definitions
+# Here we define standard fairness measures that require more than per group difference/ratios
+
+# We start with the unconditional forms of fairness from "why fairness can not be automated"
+pos_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TP+FP)/ge1(TTP+TFP)[:, np.newaxis],
+                                  'Proportion of Positive Preditions', total_metric=True)
+neg_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TN+FN)/ge1(TTN+TFN)[:, np.newaxis],
+                                  'Proportion of Negative Predictions', total_metric=True)
+diff_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: ((TP+FP)/ge1(TTP+TFP)[:, np.newaxis])
+                                   - (TN+FN)/ge1(TTN+TFN)[:, np.newaxis],
+                                   'Difference of Proportions of Predictions', total_metric=True)
+
+abs_diff_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: np.abs((TN+FN)/ge1(TTN+TFN)[:, np.newaxis]
+                                                                                         - (TP+FP)/ge1(TTP+TFP)[:, np.newaxis]),
+                                       'Proportion of Negative Predictions', total_metric=True)
+
+
+pos_data_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TP+FN)/ge1(TTP+TFN)[:, np.newaxis],
+                                  'Proportion of Positive Labels', total_metric=True)
+neg_data_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TN+FP)/ge1(TTN+TFP)[:, np.newaxis],
+                                  'Proportion of Negative Labels', total_metric=True)
+diff_data_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TP+FN)/ge1(TTP+TFN)[:, np.newaxis]-(TN+FP)/ge1(TTN+TFP)[:, np.newaxis],
+                                   'Difference of Proportion of Labels', total_metric=True)
+
+abs_diff_data_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: np.abs((TP+FN)/ge1(TTP+TFN)[:, np.newaxis]
+                                                                                         - (TN+FP)/ge1(TTN+TFP)[:, np.newaxis]),
+                                       'Absolute Difference of Proportion of Labels', total_metric=True)
+
+wachter_measures = {'pos_data_proportion': pos_data_proportion,
+                    'neg_data_proportion': neg_data_proportion,
+                    'diff_data_proportion': diff_data_proportion,
+                    'pos_pred_proportion': pos_pred_proportion,
+                    'neg_pred_proportion': neg_pred_proportion,
+                    'diff_pred_proportion': diff_pred_proportion}
+
+# directed bias amplification
+# see: https://proceedings.mlr.press/v139/wang21t/wang21t.pdf
+# warning do not use when enforcing fairness
+
+
+def _y_a_t(TP, FP, FN, TN, TTP, TFN, TFP, TTN):
+    "internal helper function that computes y_a_t from Wang et al"
+    # p(A_a=1,T=1)
+    # we remove one common normalisation term from PAT and PA as they cancel anyway
+    PAT = (TP+FN)  # /(TTP+TFN+TFP+TTN)
+    # p(A_a=1)p(T=1)
+    PA = (TP+FP+FN+TN)  # /(TTP+TFN+TFP+TTN)
+    PT = (TTP+TFN)/(TTP+TFN+TFP+TTN)
+    out = 2*(PAT > PA*PT[:, np.newaxis]) - 1
+    return out
+
+
+directed_bias_amplification = GroupMetric(lambda TP, FP, FN, TN, TTP, TFN, TFP, TTN: _y_a_t(TP, FP, FN, TN, TTP, TFN, TFP, TTN) *
+                                          (FN - FP)/(TP + FP + FN + TN),
+                                          'Directed Bias Amplification', total_metric=True, greater_is_better=False)

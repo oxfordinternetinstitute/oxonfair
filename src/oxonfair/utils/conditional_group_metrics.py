@@ -53,6 +53,7 @@ true_neg_rate = build_cond_form(gm.true_neg_rate, neg_weights)
 false_pos_rate = build_cond_form(gm.false_pos_rate, neg_weights)
 false_neg_rate = build_cond_form(gm.false_neg_rate, neg_weights)
 
+
 accuracy = build_cond_form(gm.accuracy, total_weights)
 
 cond_measures = {
@@ -61,13 +62,27 @@ cond_measures = {
     "true_neg_rate": true_neg_rate,
     "false_pos_rate": false_pos_rate,
     "false_neg_rate": false_neg_rate,
-    "pos_pred_rate": pos_pred_rate,
-    "neg_pred_rate": neg_pred_rate,
     "pos_data_rate": pos_data_rate,
-    "neg_data_rate": neg_data_rate,
+    "pos_pred_rate": pos_pred_rate,
 }
 
 
 cond_disparities = dict(
     (key + "_diff", item.diff) for (key, item) in cond_measures.items()
 )
+
+pos_data_proportion = build_cond_form(gm.pos_data_proportion, total_weights)
+neg_data_proportion = build_cond_form(gm.neg_data_proportion, total_weights)
+diff_data_proportion = build_cond_form(gm.diff_data_proportion, total_weights)
+abs_diff_data_proportion = build_cond_form(gm.abs_diff_data_proportion, total_weights)
+pos_pred_proportion = build_cond_form(gm.pos_pred_proportion, total_weights)
+neg_pred_proportion = build_cond_form(gm.neg_pred_proportion, total_weights)
+diff_pred_proportion = build_cond_form(gm.diff_pred_proportion, total_weights)
+abs_diff_pred_proportion = build_cond_form(gm.abs_diff_pred_proportion, total_weights)
+
+wachter_measures = {'pos_data_proportion': pos_data_proportion,
+                    'neg_data_proportion': neg_data_proportion,
+                    'diff_data_proportion': diff_data_proportion,
+                    'pos_pred_proportion': pos_pred_proportion,
+                    'neg_pred_proportion': neg_pred_proportion,
+                    'diff_pred_proportion': diff_pred_proportion}
