@@ -62,10 +62,8 @@ cond_measures = {
     "true_neg_rate": true_neg_rate,
     "false_pos_rate": false_pos_rate,
     "false_neg_rate": false_neg_rate,
-    "pos_pred_rate": pos_pred_rate,
-    "neg_pred_rate": neg_pred_rate,
     "pos_data_rate": pos_data_rate,
-    "neg_data_rate": neg_data_rate,
+    "pos_pred_rate": pos_pred_rate,
 }
 
 
@@ -83,8 +81,8 @@ diff_pred_proportion = build_cond_form(gm.diff_pred_proportion, total_weights)
 abs_diff_pred_proportion = build_cond_form(gm.abs_diff_pred_proportion, total_weights)
 
 wachter_measures = {'pos_data_proportion': pos_data_proportion,
-                          'neg_data_proportion': neg_data_proportion,
-                          'diff_data_proportion': diff_data_proportion,
-                          'pos_pred_proportion': pos_pred_proportion,
-                          'neg_pred_proportion': neg_pred_proportion,
-                          'diff_pred_proportion': diff_pred_proportion}
+                    'neg_data_proportion': neg_data_proportion,
+                    'diff_data_proportion': diff_data_proportion,
+                    'pos_pred_proportion': pos_pred_proportion,
+                    'neg_pred_proportion': neg_pred_proportion,
+                    'diff_pred_proportion': diff_pred_proportion}
