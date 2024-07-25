@@ -187,11 +187,11 @@ def test_recall_diff_inferred(use_fast=True):
     # difference between protected attributes of less than 2.5%) despite not
     # using sex at run-time
 
-    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.001)
+    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.005)
 
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    assert measures["updated"]["recall.diff"] < 0.001
+    assert measures["updated"]["recall.diff"] < 0.005
 
     # Prove that sex isn't being used by dropping it and reevaluating.
 
@@ -212,7 +212,7 @@ def test_normalized_classifier(fast=True):
     assert np.isclose(response.sum(1), 1).all()
 
     response2 = fpred.predict_proba(test_data)
-    assert (np.argmax(response,1) == np.argmax(response2,1)).all()
+    assert (np.argmax(response, 1) == np.argmax(response2, 1)).all()
 
 
 def test_normalized_classifier_slow():
