@@ -218,6 +218,13 @@ abs_diff_data_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN
                                                                                          - (TN+FP)/ge1(TTN+TFP)[:, np.newaxis]),
                                        'Absolute Difference of Proportion of Labels', total_metric=True)
 
+wachter_measures = {'pos_data_proportion': pos_data_proportion,
+                    'neg_data_proportion': neg_data_proportion,
+                    'diff_data_proportion': diff_data_proportion,
+                    'pos_pred_proportion': pos_pred_proportion,
+                    'neg_pred_proportion': neg_pred_proportion,
+                    'diff_pred_proportion': diff_pred_proportion}
+
 # directed bias amplification
 # see: https://proceedings.mlr.press/v139/wang21t/wang21t.pdf
 # warning do not use when enforcing fairness
