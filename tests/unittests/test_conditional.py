@@ -147,3 +147,24 @@ def test_sklearn_slow():
 def test_sklearn_hybrid():
     "check hybrid pathway"
     test_sklearn('hybrid')
+
+
+def test_automated(use_fast=True):
+    fpredictor = fair.FairPredictor(forest, test_d,
+                                    conditioning_factor=test_d['data']["race"], use_fast=use_fast)
+    fpredictor.fit(gm.accuracy, gm.demographic_parity, 0.02)
+    fpredictor.fit(gm.balanced_accuracy, cgm.abs_diff_pred_proportion.min, 0.02)
+    fpredictor.plot_frontier()
+    fpredictor.evaluate_fairness()
+    fpredictor.evaluate_fairness(metrics=cgm.not_automated_measures, verbose=False)
+    # score["updated"]["pos_pred_rate_diff"] < 0.02
+    fpredictor.evaluate_groups()
+    fpredictor.evaluate_groups(metrics=cgm.not_automated_measures)
+
+
+def test_automated_slow():
+    test_automated(False)
+
+
+def automated_hybrid():
+    test_automated('hybrid')

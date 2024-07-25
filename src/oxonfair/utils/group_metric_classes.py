@@ -25,12 +25,11 @@ class BaseGroupMetric:
         self,
         func: Callable[[np.ndarray, np.ndarray, np.ndarray, np.ndarray], np.ndarray],
         name: str,
-        greater_is_better: bool,
+        greater_is_better: bool, *,
         cond_weights=None,
+        total_metric=False
     ) -> None:
-        self.func: Callable[
-            [np.ndarray, np.ndarray, np.ndarray, np.ndarray], np.ndarray
-        ] = func
+        self.func: Callable = func
         self.name: str = name
         self.greater_is_better: bool = greater_is_better
         if cond_weights is None:
@@ -40,6 +39,7 @@ class BaseGroupMetric:
                 cond_weights, ConditionalWeighting
             ), "cond_weights must be a Conditional Metric"
             self.cond_weights = cond_weights
+        self.total_metric = total_metric
 
     @abstractmethod
     def __call__(self, *args: np.ndarray) -> np.ndarray:
@@ -55,18 +55,33 @@ class BaseGroupMetric:
         ----------
         args: a Tuple of numpy arrays.
             Either a Tuple containing a single (4 x entries x groups) or
-                a Tuple containing 3 vectors of the same length corresponding to y_true, y_pred,
-                and groups
+                a Tuple containing 3 or 4 vectors of the same length corresponding to y_true, y_pred,
+                groups and (optionally) weights
         returns
-            4  (entries x groups) sized arrays, where entries is 1 if args consisted of 3 vectors.
+            if total_weights is False
+            4  (entries x groups) sized arrays, where entries is 1 if args consisted of 3 or 4 vectors.
+            if total_weights is True
+            Two tupples consisting of
+            4  (entries x groups) sized arrays, where entries is 1 if args consisted of 3 or 4 vectors.
+            4 entiries size arrays
         """
         if len(args) == 1:
             assert args[0].shape[0] == 4, "Only one argument passed to group metric, but the first dimension is not 4."
-            return args[0][3], args[0][2], args[0][1], args[0][0]
+            if self.total_metric is False:
+                return args[0][3], args[0][2], args[0][1], args[0][0]
+            else:
+                aa = args[0].sum(2)
+                return args[0][3], args[0][2], args[0][1], args[0][0], aa[3], aa[2], aa[1], aa[0]
+
         if len(args) == 2:
             assert args[0].shape[0] == 2, "Two arguments passed to group metric, but the first dimension is not 2."
             assert args[1].shape[0] == 2, "Two arguments passed to group metric, but the first dimension is not 2."
-            return args[1][1], args[1][0], args[0][1], args[0][0]
+            if self.total_metric is False:
+                return args[1][1], args[1][0], args[0][1], args[0][0]
+            else:
+                a1 = args[1].sum(1)
+                a0 = args[0].sum(1)
+                return args[1][1], args[1][0], args[0][1], args[0][0], a1[1], a1[0], a0[1], a0[0]
         assert len(args) <= 4, "Group metrics can only take up to 4 arrays as input"
 
         assert not (len(args) == 4 and self.cond_weights is None), ("Metric called with four inputs, indicating that we should "
@@ -111,7 +126,11 @@ class BaseGroupMetric:
                 out[1, 0, i] = f_pos[mask].sum()
                 out[2, 0, i] = f_neg[mask].sum()
                 out[3, 0, i] = t_neg[mask].sum()
-        return out[0], out[1], out[2], out[3]
+        if self.total_metric is False:
+            return out[0], out[1], out[2], out[3]
+        else:
+            aa = out.sum(2)
+            return out[0], out[1], out[2], out[3], aa[0], aa[1], aa[2], aa[3]
 
     def clone(self, new_name: str, cond_weights=False):
         """Generates a copy of self with a new name, and (optionally) a new cond_weights
@@ -201,8 +220,12 @@ class Overall(BaseGroupMetric):
     "Helper class for reporting score over entire dataset"
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
-        t_pos, f_pos, f_neg, t_neg = self.build_array(args)
-        val = self.func(t_pos.sum(1), f_pos.sum(1), f_neg.sum(1), t_neg.sum(1))
+        args = self.build_array(args)
+        if self.total_metric:
+            args = list(map(lambda x: x.sum(1), args[:4])) + list(args[4:])
+        else:
+            args = list(map(lambda x: x.sum(1), args))
+        val = self.func(*args)
         return val
 
 
@@ -240,71 +263,83 @@ class GroupMetric(BaseGroupMetric):
         name: str,
         greater_is_better: bool = True,
         cond_weights=None,
+        total_metric=False
     ) -> None:
-        super().__init__(func, name, greater_is_better, cond_weights=cond_weights)
+        super().__init__(func, name, greater_is_better, cond_weights=cond_weights, total_metric=total_metric)
         self.max: GroupMax = GroupMax(
             func,
             "Maximal Group " + name,
-            greater_is_better=greater_is_better,
+            greater_is_better=False,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.min: GroupMin = GroupMin(
             func,
             "Minimal Group " + name,
-            greater_is_better=greater_is_better,
+            greater_is_better=True,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.overall: Overall = Overall(
             func,
             "Overall " + name,
             greater_is_better=greater_is_better,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.average: GroupAverage = GroupAverage(
             func,
             "Average Group " + name,
             greater_is_better=greater_is_better,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.diff: GroupDiff = GroupDiff(
             func,
             "Average Group Difference in " + name,
             greater_is_better=False,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.max_diff: GroupMaxDiff = GroupMaxDiff(
             func,
             "Maximal Group Difference in " + name,
             greater_is_better=False,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.ratio: GroupRatio = GroupRatio(
             func,
             "Average Group Ratio in " + name,
             greater_is_better=True,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.min_ratio: GroupMinimalRatio = GroupMinimalRatio(
             func,
             "Minimal Group Ratio in " + name,
             greater_is_better=True,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
         self.per_group: PerGroup = PerGroup(
             func,
             "Per Group " + name,
             greater_is_better=greater_is_better,
             cond_weights=cond_weights,
+            total_metric=total_metric
         )
 
     def clone(self, new_name, cond_weights=False):
         my_type = self.__class__
         if cond_weights is False:
             out = my_type(
-                self.func, new_name, self.greater_is_better, self.cond_weights
+                self.func, new_name, self.greater_is_better, 
+                cond_weights=self.cond_weights, total_metric=self.total_metric
             )
         else:
-            out = my_type(self.func, new_name, self.greater_is_better, cond_weights)
+            out = my_type(self.func, new_name, self.greater_is_better, cond_weights=cond_weights,
+                          total_metric=self.total_metric)
         return out
 
     def __call__(self, *args: np.ndarray) -> np.ndarray:
