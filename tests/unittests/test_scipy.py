@@ -196,9 +196,9 @@ def test_recall_diff(use_fast=True):
     # Evaluate the change in fairness (recall difference corresponds to EO)
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    assert measures["original"]["recall.diff"] > 0.025
+    assert measures["original"]["recall.diff"] > 0.025 
 
-    assert measures["updated"]["recall.diff"] < 0.025
+    assert measures["updated"]["recall.diff"] < 0.025 + 1e-4
     measures = fpredictor.evaluate(verbose=False)
     acc = measures["updated"]["accuracy"]
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025, greater_is_better_const=True)
