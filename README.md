@@ -4,7 +4,7 @@ OxonFair is an expressive toolkit designed to enforce a wide-range of fairness d
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 It is designed and works for computer vision and NLP problems alongside tabular data.
 
-Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing).
+Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing) or read the [preprint](https://arxiv.org/abs/2407.13710).
 
 For low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
 
@@ -20,7 +20,7 @@ In the terminal type:
 
     pip install 'oxonfair[full]'
 
-This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too many dependancies, try a minimal install.
+This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too many dependencies, try a minimal install.
 
 ### Minimal install
 
