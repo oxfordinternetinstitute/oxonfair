@@ -394,6 +394,22 @@ class FairPredictor:
         else:
             self.frontier = call_slow()
 
+    def frontier_thresholds(self):
+        "Returns the thresholds corresponding to the found frontier"
+        assert self.frontier, "Call fit before frontier_thresholds"
+        return self.frontier[1]
+    
+    def frontier_scores(self):
+        "Returns the scores (i.e. objective and constraint) corresponding to the found frontier"
+        assert self.frontier, "Call fit before frontier_scores"
+        return self.frontier[0]
+    
+    def set_threshold(self, threshold):
+        """Set the thresholds. 
+           This code allows the manual overriding of the thresholds found by fit to enforce different trade-offs.
+           """
+        self.offset = threshold
+
     def plot_frontier(self, data=None, groups=None, *, objective1=False, objective2=False,
                       show_updated=True, show_original=True, color=None, new_plot=True, prefix='',
                       name_frontier='Frontier', subfig=None) -> None:

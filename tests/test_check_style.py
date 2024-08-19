@@ -62,7 +62,8 @@ def test_md_links():
 
 def test_run_notebooks_without_errors():
     "run pip install nbtest before running this test"
-    check_call(['pytest', '--nbmake', '-n=auto', '--nbmake-timeout=500', 'examples'])
+    for file in glob.glob('./examples/*.ipynb'):
+        check_call(['pytest', '--nbmake',  '--nbmake-timeout=500', file])
 
 
 def test_compress_notebooks():

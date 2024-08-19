@@ -4,7 +4,7 @@ from setuptools import setup
 
 FAIR = "oxonfair"
 
-version = "0.2.1"
+version = "0.2.1.5"
 
 PYTHON_REQUIRES = ">=3.8"
 
@@ -110,9 +110,9 @@ install_requires = [
 
 extras_require = dict()
 full_requirements = ['matplotlib', 'autogluon.tabular', 'torch', 'xgboost', 'jupyterlab']
-notebook_requirements = full_requirements + ['fairlearn']
-test_requirements = notebook_requirements + ["tox", "pytest", "pytest-cov", 'flake8',
-                                             'linkcheckmd', 'ipynbcompress',]
+notebook_requirements = full_requirements + ['fairlearn', 'fairret']
+test_requirements = notebook_requirements + ["tox", "pytest", "pytest-cov", 'flake8', 'tabulate',
+                                             'linkcheckmd', 'ipynbcompress', 'nbmake']
 
 full_requirements = list(set(full_requirements))
 notebook_requirements = list(set(notebook_requirements))

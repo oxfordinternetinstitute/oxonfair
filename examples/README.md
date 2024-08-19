@@ -11,3 +11,4 @@ This folder contains a collection of example ipython notebooks illustrating diff
     a. A comparison using random forests and decision trees on the adult dataset. [Here](adult_fairlearn_comparision.ipynb)
     b. A comparison using xgboost on medical data. [Here](high-dim_fairlearn_comparision.ipynb)
     c. A comparison of run time using xgboost on multiple groups. [Here](multi_group_fairlearn_comparision.ipynb)
+7. A Comparision with [Fairret](./fairret.ipynb).
