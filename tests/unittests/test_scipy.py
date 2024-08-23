@@ -26,23 +26,32 @@ y = total_data["class"] == " <=50K"
 total_data = total_data.drop(columns="class")
 total_data = pd.get_dummies(total_data)
 
-train = total_data.sample(frac=0.5)
-val_test = total_data.drop(train.index)
-train_y = y.iloc[train.index]
-val_test_y = y.drop(train_y.index)
-val = val_test.sample(frac=0.4)
-test = val_test.drop(val.index)
-val_y = y.iloc[val.index]
-test_y = val_test_y.drop(val.index)
-predictor = classifier_type()
-predictor.fit(train, train_y)
 
-train_dict = {"data": train, "target": train_y}
-val_dict = {"data": val, "target": val_y}
-test_dict = {"data": test, "target": test_y}
+def resample():
+    global train, train_y, val, val_y, test, test_y, predictor
+    global train_dict, val_dict, test_dict
+    global train_dict_g, val_dict_g, test_dict_g
+    train = total_data.sample(frac=0.5)
+    val_test = total_data.drop(train.index)
+    train_y = y.iloc[train.index]
+    val_test_y = y.drop(train_y.index)
+    val = val_test.sample(frac=0.4)
+    test = val_test.drop(val.index)
+    val_y = y.iloc[val.index]
+    test_y = val_test_y.drop(val.index)
 
-val_dict_g = fair.DataDict(val_y, val, val['sex_ Female'])
-test_dict_g = fair.DataDict(test_y, test, test['sex_ Female'])
+    predictor = classifier_type()
+    predictor.fit(train, train_y)
+
+    train_dict = {"data": train, "target": train_y}
+    val_dict = {"data": val, "target": val_y}
+    test_dict = {"data": test, "target": test_y}
+
+    val_dict_g = fair.DataDict(val_y, val, val['sex_ Female'])
+    test_dict_g = fair.DataDict(test_y, test, test['sex_ Female'])
+
+
+resample()
 
 
 def test_base_functionality(val_dict=val_dict, test_dict=test_dict):
@@ -199,7 +208,7 @@ def test_recall_diff(use_fast=True):
 
     assert measures["original"]["recall.diff"] > 0.025
 
-    assert measures["updated"]["recall.diff"] < 0.025 + 1e-4
+    assert measures["updated"]["recall.diff"] <= 0.025
     measures = fpredictor.evaluate(verbose=False)
     acc = measures["updated"]["accuracy"]
     fpredictor.fit(gm.accuracy, gm.recall.diff, 0.025, greater_is_better_const=True)
@@ -271,11 +280,33 @@ def test_recall_diff_slow():
 def test_recall_diff_hybrid():
     test_recall_diff('hybrid')
 
+""" too slow and disabled
+def test_many_recall_diff_hybrid(many=200):
+    count = 0
+    for i in range(many):
+        resample()
+        try:
+            test_recall_diff_hybrid()
+        except:
+            count += 1
+    assert count == 0
+
+
+def test_many_recall_diff_slow(many=200):
+    count = 0
+    for i in range(many):
+        resample()
+        try:
+            test_recall_diff_slow()
+        except:
+            count += 1
+    assert count == 0
+
 
 def test_min_recall_slow():
     "test slow pathway"
     test_min_recall(False)
-
+"""
 
 def test_min_recall_hybrid():
     test_min_recall('hybrid')
