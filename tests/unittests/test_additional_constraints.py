@@ -71,7 +71,7 @@ def test_active_constraints(use_fast=True):
     cpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
 
     cpredictor.fit(gm.accuracy, gm.recall.diff, 0.005, additional_constraints=((gm.pos_pred_rate, .7),))
-    assert cpredictor.evaluate(metrics={'m': gm.pos_pred_rate})['updated'][0] > .7
+    assert cpredictor.evaluate(metrics={'m': gm.pos_pred_rate})['updated'][0] >= .7
 
 
 def test_active_constraints_slow():
