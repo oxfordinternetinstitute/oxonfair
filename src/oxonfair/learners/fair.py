@@ -398,14 +398,14 @@ class FairPredictor:
         "Returns the thresholds corresponding to the found frontier"
         assert self.frontier, "Call fit before frontier_thresholds"
         return self.frontier[1]
-    
+
     def frontier_scores(self):
         "Returns the scores (i.e. objective and constraint) corresponding to the found frontier"
         assert self.frontier, "Call fit before frontier_scores"
         return self.frontier[0]
-    
+
     def set_threshold(self, threshold):
-        """Set the thresholds. 
+        """Set the thresholds.
            This code allows the manual overriding of the thresholds found by fit to enforce different trade-offs.
            """
         self.offset = threshold
@@ -600,17 +600,17 @@ class FairPredictor:
         score = y_pred_proba[:, 1] - y_pred_proba[:, 0]
         collect = perf.evaluate_fairness(labels, score, groups, factor,
                                          metrics=metrics, verbose=verbose, threshold=0)
-        collect.columns = ['original']
 
         if self.frontier is not None:
             y_pred_proba = np.asarray(self.predict_proba(data))
-            score = y_pred_proba[:, 1]-y_pred_proba[:, 0]
+            score = (y_pred_proba[:, 1]-y_pred_proba[:, 0])/2
             new_pd = perf.evaluate_fairness(labels, score, groups, factor,
                                             metrics=metrics, verbose=verbose,
                                             threshold=0)
 
-            new_pd.columns = ['updated']
             collect = pd.concat([collect, new_pd], axis='columns')
+            collect.columns = ['original', 'updated']
+
         return collect
 
     def fairness_metrics(self, y_true: np.ndarray, proba, groups: np.ndarray,
@@ -812,7 +812,34 @@ class FairPredictor:
         Such that head_1 + a.dot(head_2) has the same outputs as our fair classifier.
         This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier.
         """
-        return self.offset[:, 0]
+        return -self.offset[:, 0]
+
+    def merge_heads_pytorch(self, heads):
+        """Merges multiple heads into a single head of the same form, that enforces fairness.
+        heads is assumed to be a 2-d torch linear layer of dimension: backbone width by number of heads.
+        The first head is assumed to be the classifier response, and the remainder of heads encode the attributes.
+        If the number of heads is two we asumme the second-head was trained to enocde a binary attributes with labels roughly 0 and 1.
+        If the number of heads is more than two we assume all heads except the first encode an approximate 1-hot embedding of the attributes"""
+        from torch.nn import Linear
+        from torch import Tensor
+        assert isinstance(heads, Linear)
+        assert heads.out_features > 1
+        out = Linear(heads.in_features, 1, dtype=heads.weight.dtype)
+        if heads.out_features == 2:
+            assert self.offset.shape[0] == 2, 'Dimension mismatch between training data and heads'
+            coeff = self.extract_coefficients()
+            # Now we merge the weights
+            out.weight.data[:] = (heads.weight[0] + coeff[0]*heads.weight[1]).data
+            # and the biases
+            out.bias.data[:] = (heads.bias[0] + coeff[0]*heads.bias[1]).data
+            # and add the extra bias term
+            out.bias.data += coeff[1]
+        else:
+            assert self.offset.shape[0] == heads.out_features-1, 'Dimension mismatch between training data and heads'
+            coeff = Tensor(self.extract_coefficients_1_hot())
+            out.weight.data[:] = (heads.weight[0] + coeff.inner(heads.weight[1:].T)).data
+            out.bias.data[:] = (heads.bias[0] + coeff.dot(heads.bias[1:])).data
+        return out
 
 
 def _needs_groups(func) -> bool:

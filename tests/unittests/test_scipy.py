@@ -93,8 +93,9 @@ def test_conflict_groups():
 def test_fit_creates_updated(use_fast=True):
     """eval should return 'updated' iff fit has been called"""
     fpredictor = FairPredictor(predictor, val_dict, use_fast=use_fast)
-    assert 'updated' not in fpredictor.evaluate().columns
+    assert isinstance(fpredictor.evaluate(), pd.Series)
     fpredictor.fit(gm.accuracy, gm.recall, 0)  # constraint is intentionally slack
+    assert not isinstance(fpredictor.evaluate(), pd.Series)
     assert 'updated' in fpredictor.evaluate().columns
 
 
@@ -196,7 +197,7 @@ def test_recall_diff(use_fast=True):
     # Evaluate the change in fairness (recall difference corresponds to EO)
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    assert measures["original"]["recall.diff"] > 0.025 
+    assert measures["original"]["recall.diff"] > 0.025
 
     assert measures["updated"]["recall.diff"] < 0.025 + 1e-4
     measures = fpredictor.evaluate(verbose=False)
