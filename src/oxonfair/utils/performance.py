@@ -90,7 +90,7 @@ def evaluate_fairness(target, prediction, groups, factor=None, *,
         values[i] = dispatch_metric(
             metrics[k], target, prediction, groups, factor, threshold=threshold)
 
-    return pd.DataFrame(values, index=names)
+    return pd.DataFrame(values, index=names)[0]
 
 
 def evaluate_per_group(target, prediction, groups, factor=None, *,

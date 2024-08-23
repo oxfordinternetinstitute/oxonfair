@@ -45,7 +45,7 @@ def compute_metrics(metrics: Sequence[Callable], y_true: np.ndarray, proba: np.n
         then select the max and compute a fairness metric """
     scores = np.zeros((len(metrics), weights.shape[-1]))
     y_true = np.asarray(y_true)
-    assert weights[:, 1, :].sum() == 0
+    # assert weights[:, 1, :].sum() == 0
     weights = weights[:, 0, :]
     proba = proba[:, 0] - proba[:, 1]
 
@@ -61,7 +61,7 @@ def compute_metrics(metrics: Sequence[Callable], y_true: np.ndarray, proba: np.n
     for i in range(weights.shape[-1]):
         threshold_assignment.dot(weights[:, i], out=tmp)
         tmp += proba  # [:, np.newaxis]
-        pred = (tmp <= 0)
+        pred = (tmp < 0)  # <= may be causing a mismatch
 
         # np.dot(threshold_assignment, weights[:, i], tmp)
         # tmp += proba

@@ -2,7 +2,7 @@
 
 OxonFair is an expressive toolkit designed to enforce a wide-range of fairness definitions and to customize binary classifier behavior.
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
-It is designed and works for computer vision and NLP problems alongside tabular data.
+Unlike other toolkits it is designed and works for computer vision and NLP problems alongside tabular data.
 
 Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing) or read the [preprint](https://arxiv.org/abs/2407.13710).
 
@@ -114,6 +114,16 @@ At the same time, postprocessing methods which allow you to train once, and then
 OxonFair is build from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use inferred attributes where protected attributes are not available to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g., scikit-learn or xgboost, with inferred attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
 
 That said, we make several additional design decisions which we believe make for a better experience for data scientists:
+
+#### Direct support for pytorch including NLP and Computer Vision
+
+See [here](./examples/pytorch_minimal_demo.ipynb) for an example.
+In brief, the steps are:
+
+1. Train your network.
+2. Call `DeepFairPredictor` with the network output on validation data.
+3. Call `fit` to enforce fairness. Use `evaluate_groups` and `plot_frontier` to explore trade-offs.
+4. Use `merge_heads_pytorch` to generate a fair network.  
 
 #### Fine-grained control of behavior
 
