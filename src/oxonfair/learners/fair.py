@@ -303,6 +303,7 @@ class FairPredictor:
             vmax = [values.argmin(),
                     values.argmax()][int(greater_is_better_obj)]
         self.offset = weights.T[vmax].T
+        return self
 
     def compute_frontier(self, objective1, objective2, greater_is_better_obj1,
                          greater_is_better_obj2, *, tol=False,
