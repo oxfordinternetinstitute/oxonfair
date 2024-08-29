@@ -38,7 +38,12 @@ def compute_metric(
         proba_update = proba.copy()
         proba_update[:, 1] += weights[group_prediction, i]
         pred = proba_update.argmax(-1)
-        score[i] = metric(y_true, pred, groups)[0]
+        met = metric(y_true, pred, groups)[0]
+        if i == 0:
+            if isinstance(met, np.ndarray):  # patch to handle per-group
+                score = np.zeros((weights.shape[-1], met.shape[0]))
+        score[i] = met
+
     return score
 
 
