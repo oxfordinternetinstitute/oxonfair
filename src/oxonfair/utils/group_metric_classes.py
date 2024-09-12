@@ -99,7 +99,7 @@ class BaseGroupMetric:
         else:
             weights = False
 
-        assert y_true.size == y_pred.size == groups.shape[0], ("Inputs to group_metric are of different length. "
+        assert (y_true.size == y_pred.size == groups.shape[0]) and (y_true.shape == y_pred.shape), ("Inputs to group_metric are of different length. "
                                                                "Make sure that all variables are ordinal encoded and not one-hot.")
         t_pos = y_true * y_pred
         f_pos = (1 - y_true) * y_pred
