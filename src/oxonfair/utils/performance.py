@@ -74,6 +74,7 @@ def evaluate_fairness(target, prediction, groups, factor=None, *,
     a pandas dataset containing rows indexed by fairness measure name
     """
     target = target.squeeze()
+    assert np.unique(target).shape[0] == 2, 'More than two target labels used. OxonFair only works with binary predictors'
     threshold = find_threshold(threshold, prediction)
     if groups is None:
         groups = np.ones_like(target)
@@ -115,6 +116,8 @@ def evaluate_per_group(target, prediction, groups, factor=None, *,
     a pandas dataset containing rows indexed by fairness measure name
     """
     target = target.squeeze()
+    assert np.unique(target).shape[0] == 2, 'More than two target labels used. OxonFair only works with binary predictors'
+
     threshold = find_threshold(threshold, prediction)
 
     if metrics is None:
