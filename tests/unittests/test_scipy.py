@@ -280,6 +280,7 @@ def test_recall_diff_slow():
 def test_recall_diff_hybrid():
     test_recall_diff('hybrid')
 
+
 """ too slow and disabled
 def test_many_recall_diff_hybrid(many=200):
     count = 0
@@ -306,7 +307,8 @@ def test_many_recall_diff_slow(many=200):
 def test_min_recall_slow():
     "test slow pathway"
     test_min_recall(False)
-"""
+ # """
+
 
 def test_min_recall_hybrid():
     test_min_recall('hybrid')
