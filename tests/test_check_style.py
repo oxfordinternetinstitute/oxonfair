@@ -54,7 +54,7 @@ def test_check_style_examples():
 
 
 def test_md_links():
-    missing_links = lc.check_links('./', ext='.md', recurse=True,)
+    missing_links = lc.check_links('./', ext='.md', recurse=True, use_async=False)
     for link in missing_links:
         warnings.warn(link)
     assert missing_links == []
