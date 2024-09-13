@@ -222,9 +222,7 @@ def test_recall_diff(use_fast=True):
 def test_disp_impact(use_fast=True):
     """Enforce the 4/5 rule that the worst ratio between the proportion
       of positive decisions is greater than 0.9"""
-    fpredictor = fair.FairPredictor(
-        predictor, test_dict, "sex_ Female", use_fast=use_fast
-    )
+    fpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
     fpredictor.fit(gm.accuracy, gm.disparate_impact, 0.9)
 
     measures = fpredictor.evaluate_fairness(metrics=gm.clarify_metrics, verbose=False)
@@ -280,6 +278,7 @@ def test_recall_diff_slow():
 def test_recall_diff_hybrid():
     test_recall_diff('hybrid')
 
+
 """ too slow and disabled
 def test_many_recall_diff_hybrid(many=200):
     count = 0
@@ -306,7 +305,8 @@ def test_many_recall_diff_slow(many=200):
 def test_min_recall_slow():
     "test slow pathway"
     test_min_recall(False)
-"""
+ # """
+
 
 def test_min_recall_hybrid():
     test_min_recall('hybrid')
@@ -407,3 +407,17 @@ def test_total_metrics_hybrid():
 
 def test_total_metrics_slow():
     test_total_metrics(fast=False)
+
+
+def test_frontier(use_fast=True):
+    fpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
+    fpredictor.fit(gm.accuracy, gm.recall.diff, 0.9)
+    assert (fpredictor.frontier_scores() == fpredictor.frontier_scores(test_dict)).all()
+
+
+def test_frontier_slow():
+    test_frontier(False)
+
+
+def test_frontier_hybrid():
+    test_frontier('hybrid')

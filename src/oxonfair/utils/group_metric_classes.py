@@ -334,7 +334,7 @@ class GroupMetric(BaseGroupMetric):
         my_type = self.__class__
         if cond_weights is False:
             out = my_type(
-                self.func, new_name, self.greater_is_better, 
+                self.func, new_name, self.greater_is_better,
                 cond_weights=self.cond_weights, total_metric=self.total_metric
             )
         else:
@@ -383,6 +383,38 @@ class AddGroupMetrics(BaseGroupMetric):
         return self.weight * self.metric1(*args) + (1 - self.weight) * self.metric2(
             *args
         )
+
+
+class MaxGroupMetrics(BaseGroupMetric):
+    """Group Metric consisting of the maximum of two existing metrics
+    parameters
+    ----------
+    metric1: a BaseGroupMetric
+    metric2: a BaseGroupMetric
+    name:    a string
+    returns
+    -------
+    a BaseGroupMetric that gives scores of the form:
+        np.maximum(metric1_response, metric2_response)"""
+
+    def __init__(
+        self,
+        metric1: BaseGroupMetric,
+        metric2: BaseGroupMetric,
+        name: str,  # pylint: disable=super-init-not-called
+    ) -> None:
+        self.metric1: BaseGroupMetric = metric1
+        self.metric2: BaseGroupMetric = metric2
+        self.name = name
+        self.cond_weights = None
+        if metric1.greater_is_better != metric2.greater_is_better:
+            logger.error(
+                "Metric1 and metric2  must satisfy the condition. metric1.greater_is_better == metric2.greater_is_better "
+            )
+        self.greater_is_better = metric1.greater_is_better
+
+    def __call__(self, *args: np.ndarray) -> np.ndarray:
+        return np.maximum(self.metric1(*args), self.metric2(*args))
 
 
 class Utility(GroupMetric):

@@ -133,8 +133,8 @@ class FairPredictor:
         # to functions expecting a vector
         self._internal_groups = self.groups_to_numpy(groups, self.validation_data)
         self._internal_conditioning_factor = self.cond_fact_to_numpy(conditioning_factor, self.validation_data)
-        if self._internal_groups.shape[0] != validation_labels.shape[0]:
-            logger.error('The size of the groups does not match the dataset size')
+        assert self._internal_groups.shape[0] == validation_labels.shape[0], 'The size of the groups does not match the dataset size'
+        assert np.unique(validation_labels).shape[0] == 2, 'More than two target labels used. OxonFair only works with binary predictors'
 
         self.inferred_groups = inferred_groups
         if inferred_groups:
@@ -400,10 +400,67 @@ class FairPredictor:
         assert self.frontier, "Call fit before frontier_thresholds"
         return self.frontier[1]
 
-    def frontier_scores(self):
+    def frontier_scores(self, data=None):
         "Returns the scores (i.e. objective and constraint) corresponding to the found frontier"
         assert self.frontier, "Call fit before frontier_scores"
-        return self.frontier[0]
+        if data is None:
+            return self.frontier[0]
+
+        objective1 = self.objective1
+        objective2 = self.objective2
+
+        if isinstance(data, dict):
+            labels = np.asarray(data['target'])
+            proba = call_or_get_proba(self.predictor, data['data'])
+
+        else:
+            assert not is_not_autogluon(self.predictor), 'Data must be a dict unless using autogluon predictors'
+            labels = np.asarray(data[self.predictor.label])
+            proba = call_or_get_proba(self.predictor, data)
+            labels = (labels == self.predictor.positive_class) * 1
+        if self.add_noise:
+            proba += np.random.normal(0, self.add_noise, proba.shape)
+
+        groups = self.groups_to_numpy(None, data)
+        if groups is None:
+            groups = np.ones_like(labels)
+
+        if self.inferred_groups is False:
+            if self.groups is False:
+                val_thresholds = np.ones((groups.shape[0], 1))
+            else:
+                val_thresholds = self.group_encoder.transform(groups.reshape(-1, 1)).toarray()
+        else:
+            if isinstance(data, dict):
+                val_thresholds = call_or_get_proba(self.inferred_groups, data['data'])
+            else:
+                val_thresholds = call_or_get_proba(self.inferred_groups, data)
+
+        if self.use_fast is not True:
+            factor = self._internal_conditioning_factor
+            if _needs_groups(objective1):
+                objective1 = fix_groups_and_conditioning(objective1,
+                                                         self.groups_to_numpy(groups, data), factor, self.y_true)
+            if _needs_groups(objective2):
+                objective2 = fix_groups_and_conditioning(objective2,
+                                                         self.groups_to_numpy(groups, data), factor, self.y_true)
+
+            front1 = fair_frontier.compute_metric(objective1, labels, proba,
+                                                  val_thresholds, self.frontier[1])
+            front2 = fair_frontier.compute_metric(objective2, labels, proba,
+                                                  val_thresholds, self.frontier[1])
+
+        else:
+            front1 = efficient_compute.compute_metric(objective1, labels, proba,
+                                                      groups,
+                                                      self.infered_to_hard(val_thresholds),
+                                                      self.frontier[1])
+            front2 = efficient_compute.compute_metric(objective2, labels, proba,
+                                                      groups,
+                                                      self.infered_to_hard(val_thresholds),
+                                                      self.frontier[1])
+
+        return (front1, front2)
 
     def set_threshold(self, threshold):
         """Set the thresholds.
@@ -467,6 +524,7 @@ class FairPredictor:
                 proba = call_or_get_proba(self.predictor, data['data'])
 
             else:
+                assert not is_not_autogluon(self.predictor), 'Data must be a dict unless using autogluon predictors'
                 labels = np.asarray(data[self.predictor.label])
                 proba = call_or_get_proba(self.predictor, data)
                 labels = (labels == self.predictor.positive_class) * 1
@@ -1090,6 +1148,7 @@ def DeepDataDict(target, score, groups, groups_inferred=None, *,
     assert groups.ndim == 1
     assert score.shape[0] == target.shape[0]
     assert target.shape[0] == groups.shape[0]
+    assert score.shape[1] > 1
     if groups_inferred is not None:
         assert score.shape[1] == 1
         assert groups_inferred.ndim == 2
