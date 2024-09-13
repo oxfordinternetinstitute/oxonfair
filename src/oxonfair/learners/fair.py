@@ -133,8 +133,8 @@ class FairPredictor:
         # to functions expecting a vector
         self._internal_groups = self.groups_to_numpy(groups, self.validation_data)
         self._internal_conditioning_factor = self.cond_fact_to_numpy(conditioning_factor, self.validation_data)
-        if self._internal_groups.shape[0] != validation_labels.shape[0]:
-            logger.error('The size of the groups does not match the dataset size')
+        assert self._internal_groups.shape[0] == validation_labels.shape[0], 'The size of the groups does not match the dataset size'
+        assert np.unique(validation_labels).shape[0] == 2, 'More than two target labels used. OxonFair only works with binary predictors'
 
         self.inferred_groups = inferred_groups
         if inferred_groups:
@@ -460,7 +460,7 @@ class FairPredictor:
                                                       self.infered_to_hard(val_thresholds),
                                                       self.frontier[1])
 
-            return (front1, front2)
+        return (front1, front2)
 
     def set_threshold(self, threshold):
         """Set the thresholds.
@@ -1148,6 +1148,7 @@ def DeepDataDict(target, score, groups, groups_inferred=None, *,
     assert groups.ndim == 1
     assert score.shape[0] == target.shape[0]
     assert target.shape[0] == groups.shape[0]
+    assert score.shape[1] > 1
     if groups_inferred is not None:
         assert score.shape[1] == 1
         assert groups_inferred.ndim == 2
