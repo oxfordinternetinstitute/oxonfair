@@ -303,6 +303,7 @@ class FairPredictor:
             vmax = [values.argmin(),
                     values.argmax()][int(greater_is_better_obj)]
         self.offset = weights.T[vmax].T
+        return self
 
     def compute_frontier(self, objective1, objective2, greater_is_better_obj1,
                          greater_is_better_obj2, *, tol=False,
@@ -527,15 +528,32 @@ class FairPredictor:
             front2_u = efficient_compute.compute_metric(objective2, labels, proba, groups,
                                                         self.infered_to_hard(val_thresholds),
                                                         self.offset[:, np.newaxis])
-        if color is None:
-            ax.scatter(front2, front1, label=prefix+name_frontier)
-            if show_original:
-                ax.scatter(zero[1], zero[0], s=40, label='Original predictor', marker='*')
-            if show_updated:
-                ax.scatter(front2_u, front1_u, s=40, label=prefix+'Updated predictor', marker='s')
-            ax.legend(loc='best')
-        else:
-            ax.scatter(front2, front1, c=color)
+
+        def cross_scatter(front1, front2, color=None, s=None, marker=None, label="", edgecolors=None):
+            if not isinstance(front2, np.ndarray):
+                front2 = np.asarray(front2).reshape(-1)
+            if not isinstance(front1, np.ndarray):
+                front1 = np.asarray(front1).reshape(-1)
+
+            front2 = front2.reshape(front2.shape[0], -1)
+            front1 = front1.reshape(front1.shape[0], -1)
+            for i in range(max(front1.shape[-1], front2.shape[-1])):
+                if front1.shape[-1] == 1:
+                    i1 = 0
+                else:
+                    i1 = i
+                if front2.shape[-1] == 1:
+                    i2 = 0
+                else:
+                    i2 = i
+
+                ax.scatter(front2[:, i2], front1[:, i1], label=label, c=color, s=s, marker=marker, edgecolors=edgecolors)
+        cross_scatter(front1, front2, color=color, label=prefix+name_frontier)
+        if show_original:
+            cross_scatter(zero[0], zero[1], s=40, label='Original predictor', marker='*', edgecolors='k')
+        if show_updated:
+            cross_scatter(front1_u, front2_u, s=40, label=prefix+'Updated predictor', marker='s', edgecolors='k')
+        ax.legend(loc='best')
 
     def evaluate(self, data=None, metrics=None, verbose=True) -> pd.DataFrame:
         """Compute standard metrics of the original predictor and the updated predictor
