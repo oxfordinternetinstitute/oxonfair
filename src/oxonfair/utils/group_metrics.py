@@ -5,7 +5,7 @@ import numpy as np
 from .scipy_metrics_cont_wrapper import roc_auc, average_precision, ScorerRequiresContPred  # noqa: F401
 from .group_metric_classes import ( # pylint: disable=unused-import # noqa
     GroupMetric,
-    AddGroupMetrics,
+    AddGroupMetrics, MaxGroupMetrics,
     Utility)  # noqa: F401
 # N.B. BaseGroupMetric and Utility are needed for type declarations
 
@@ -166,6 +166,10 @@ equal_opportunity = recall.diff.clone("Equal Opportunity")
 equalized_odds = AddGroupMetrics(
     true_pos_rate.diff, true_neg_rate.diff, "Equalized Odds"
 )
+equalized_odds_max = MaxGroupMetrics(
+    true_pos_rate.max_diff, true_neg_rate.max_diff, "Equalized Odds (L_inf)"
+)
+
 cond_use_accuracy = AddGroupMetrics(
     pos_pred_val.diff, neg_pred_val.diff, "Conditional Use Accuracy"
 )
