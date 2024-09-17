@@ -134,7 +134,7 @@ class FairPredictor:
         self._internal_groups = self.groups_to_numpy(groups, self.validation_data)
         self._internal_conditioning_factor = self.cond_fact_to_numpy(conditioning_factor, self.validation_data)
         assert self._internal_groups.shape[0] == validation_labels.shape[0], 'The size of the groups does not match the dataset size'
-        assert np.unique(validation_labels).shape[0] == 2, 'More than two target labels used. OxonFair only works with binary predictors'
+        assert np.unique(validation_labels).shape[0] <= 2, 'More than two target labels used. OxonFair only works with binary predictors'
 
         self.inferred_groups = inferred_groups
         if inferred_groups:
