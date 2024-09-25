@@ -1134,7 +1134,7 @@ def DataDict(target, data, groups=None, conditioning_factor=None) -> dict:
 
 def DeepDataDict(target, score, groups, groups_inferred=None, *,
                  conditioning_factor=None) -> dict:
-    """Wrapper around build_data_dict for deeplearning with inferred attributes.
+    """Wrapper around DataDict for deeplearning with inferred attributes.
      It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
      target: a numpy array containing the values the classifier should predict(AKA groundtruth)
@@ -1148,7 +1148,7 @@ def DeepDataDict(target, score, groups, groups_inferred=None, *,
     assert groups.ndim == 1
     assert score.shape[0] == target.shape[0]
     assert target.shape[0] == groups.shape[0]
-    assert score.shape[1] > 1
+    assert score.shape[1] >= 1
     if groups_inferred is not None:
         assert score.shape[1] == 1
         assert groups_inferred.ndim == 2
