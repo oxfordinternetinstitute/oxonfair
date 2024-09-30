@@ -240,8 +240,9 @@ class FairPredictor:
     def fit(self, objective, constraint=group_metrics.accuracy, value=0.0, *,
             greater_is_better_obj=None, greater_is_better_const=None,
             recompute=True, tol=False, grid_width=False, threshold=None,
-            additional_constraints=()):
+            additional_constraints=(), force_levelling_up=False):
         """Fits the chosen predictor to optimize an objective while satisfing a constraint.
+
         parameters
         ----------
         objective: a BaseGroupMetric or Scorable to be optimised
@@ -268,6 +269,13 @@ class FairPredictor:
         threshold: A float between 0 and 1 or None. If threshold is not None, this overwrites
                     the threshold used for assignment to a "don't know class" in the hard assignment
                     of inferened groups.
+        additional_constraints: A list of tupples of the form (metric, value, direction[optional]).
+        This will drop all solutions from the pareto frontier that do not satisfy all additional constraints
+        force_levelling_up: None (default), +1, or -1.
+                            If none, do nothing.
+                            If +1 force all weights found to be non-negative  -- i.e. fit can only increase the selection rate.
+                            If -1 force all weights found to be non-positive  -- i.e. fit can only decrease the selection rate.
+
         returns
         -------
         Nothing
@@ -284,7 +292,8 @@ class FairPredictor:
                                   greater_is_better_obj1=greater_is_better_obj,
                                   greater_is_better_obj2=greater_is_better_const, tol=tol,
                                   grid_width=grid_width,
-                                  additional_constraints=additional_constraints)
+                                  additional_constraints=additional_constraints,
+                                  force_levelling_up=force_levelling_up)
         if greater_is_better_const:
             mask = self.frontier[0][1] >= value
         else:
@@ -307,8 +316,10 @@ class FairPredictor:
 
     def compute_frontier(self, objective1, objective2, greater_is_better_obj1,
                          greater_is_better_obj2, *, tol=False,
-                         grid_width=False, additional_constraints=()) -> None:
+                         grid_width=False, additional_constraints=(),
+                         force_levelling_up=False) -> None:
         """ Computes the parato frontier. Internal logic used by fit
+
         parameters
         ----------
         objective1: a BaseGroupMetric or Scorable to be optimised
@@ -324,6 +335,7 @@ class FairPredictor:
                             Generally not needed.
         grid_width: allows manual specification of the grid size. N.B. the overall computational
                     budget is O(grid_width**groups)
+
         returns
         -------
         Nothing
@@ -351,10 +363,19 @@ class FairPredictor:
             values[i] = c[1]
 
         proba = self.proba
+
         self.round = tol
 
         if tol is not False:
             proba = np.around(self.proba / tol) * tol
+        proba = proba[:, 0] - proba[:, 1]
+
+        if force_levelling_up:  # Truncate search space
+            if force_levelling_up == '-':
+                proba = np.minimum(proba,  -1e-6)
+            else:
+                proba = np.maximum(proba, 0)
+        assert force_levelling_up in [False, '+', '-', True], 'force_levelling_up must be one of False, +, - or True'
 
         def call_slow(existing_weights=None):
             fix_obj = [fix_groups_and_conditioning(obj, self._internal_groups,
@@ -363,7 +384,7 @@ class FairPredictor:
                 gw = 18
             else:
                 gw = grid_width
-            coarse_thresh = np.asarray(self._val_thresholds, dtype=np.float16)
+            coarse_thresh = self._val_thresholds  # np.asarray(self._val_thresholds, dtype=np.float16)
             return fair_frontier.build_coarse_to_fine_front(fix_obj,
                                                             self.y_true, proba,
                                                             coarse_thresh,
@@ -372,7 +393,7 @@ class FairPredictor:
                                                             initial_divisions=gw,
                                                             logit_scaling=self.logit_scaling,
                                                             existing_weights=existing_weights,
-                                                            additional_constraints=values)
+                                                            additional_constraints=values)  # force_levelling_up=True)
 
         def call_fast(grid_width=grid_width):
             if grid_width is False:
@@ -382,7 +403,8 @@ class FairPredictor:
                                                  self._internal_groups,
                                                  steps=min(30, (30**5)**(1 / self._val_thresholds.shape[1])),
                                                  directions=direction, factor=self._internal_conditioning_factor,
-                                                 additional_constraints=values)
+                                                 additional_constraints=values,
+                                                 force_levelling_up=force_levelling_up)
 
         if self.use_fast == 'hybrid':
             frontier = call_fast(min(grid_width, min(30, (30**5)**(1 / self._val_thresholds.shape[1]))))

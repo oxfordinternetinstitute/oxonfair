@@ -49,13 +49,14 @@ def compute_metric(
 
 def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: np.ndarray,
                additional_constraints: Sequence,
-               *, tol=1e-12) -> Tuple[np.ndarray, np.ndarray]:
+               *, tol=1e-12, force_levelling_up=False) -> Tuple[np.ndarray, np.ndarray]:
     """Modified from
         https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
         Returns Pareto efficient row subset of solutions and its associated weights
         Direction if a vector that governs if the frontier should maximize or minimize each
         direction.
         Where an element of direction is positive frontier maximizes, negative, it mimizes.
+
         parameters
         ----------
         solutions: a numpy array of values that are evaluated to find the frontier
@@ -68,7 +69,12 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
         additional constrains: vector of floats of size frontier width - 2
             These are hard constraints any point will be discarded if
             solution[i+2]*direction<additional_constraints[i]*direction .
-        returns
+        force_levelling_up: Either False, +1, or -1.
+            If false do nothing.
+            If +1 keep only weights that are non-negative.
+            If -1 keep only weights that are non-positive.
+
+       returns
         -------
         a pair of numpy arrays.
             1. reduced set of solutions associated with the Pareto front
@@ -86,6 +92,14 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
     # drop all points violating additional constraints.
     for i, val in enumerate(additional_constraints):
         mask = front[:, 2+i] >= val*directions[2+i]
+        front = front[mask]
+        weights = weights[mask]
+
+    if force_levelling_up:
+        if force_levelling_up == '-1':
+            mask = (weights <= 0).any(1)
+        else:
+            mask = (weights <= 0).any(1)
         front = front[mask]
         weights = weights[mask]
 
@@ -157,6 +171,7 @@ def build_grid(accum_count: np.ndarray, bottom, top, metrics: Tuple[Callable],
     By sorting the data per assigned group  we can efficiently compute these four values by looking
     at the cumlative sum of positive and negative labelled data (provided by ordered encode).
     This brings any subsequent computation of metrics down to O(1) in the dataset size.
+
     Parameters
     ----------
     accum_count:
@@ -164,6 +179,7 @@ def build_grid(accum_count: np.ndarray, bottom, top, metrics: Tuple[Callable],
     top: a single number or per group numpy array indicating where the grid should stop
     metrics: an iterable of BaseGroupMetrics
     steps: (optional) The number of divisions per group
+
     returns
     -------
     a tupple of three numpy arrays:
@@ -191,6 +207,7 @@ def build_grid2(accum_counts: Tuple[np.ndarray], bottom, top, metrics: Tuple[Cal
     By sorting the data per assigned group  we can efficiently compute these four values by looking
     at the cumlative sum of positive and negative labelled data (provided by ordered encode).
     This brings any subsequent computation of metrics down to O(1) in the dataset size.
+
     Parameters
     ----------
     accum_count:
@@ -198,6 +215,7 @@ def build_grid2(accum_counts: Tuple[np.ndarray], bottom, top, metrics: Tuple[Cal
     top: a single number or per group numpy array indicating where the grid should stop
     metrics: an iterable of BaseGroupMetrics
     steps: (optional) The number of divisions per group
+
     returns
     -------
     a tupple of three numpy arrays:
@@ -224,6 +242,7 @@ def condense(thresholds: np.ndarray, labels: np.ndarray, lmax: int, groups: np.n
     """Take an array of float thresholds and non-negative integer labels, groups and
     return a sorted List of unique thresholds and the counts for each unique count of
     threshold, label, group
+
     parameters
     ----------
     thresholds: a numpy array of initial thresholds to reduce.
@@ -231,6 +250,7 @@ def condense(thresholds: np.ndarray, labels: np.ndarray, lmax: int, groups: np.n
     lmax: the maximum label ever used.
     groups: a numpy array of initial groups to count when reducing.
     gmax: the maximum group ever used
+
     returns
     -------
     1. a sorted numpy array of unique thresholds
@@ -254,6 +274,7 @@ def condense_weights(thresholds: np.ndarray, labels: np.ndarray, lmax: int, grou
     """Take an array of float thresholds and non-negative integer labels, groups and
     return a sorted List of unique thresholds and the counts for each unique count of
     threshold, label, group
+
     parameters
     ----------
     thresholds: a numpy array of initial thresholds to reduce.
@@ -262,6 +283,7 @@ def condense_weights(thresholds: np.ndarray, labels: np.ndarray, lmax: int, grou
     groups: a numpy array of initial groups to count when reducing.
     gmax: the maximum group ever used
     weights1 and weights2
+
     returns
     -------
     1. a sorted numpy array of unique thresholds
@@ -312,7 +334,7 @@ def cumsum_zero_and_reverse(array: np.ndarray):
 
 
 def grid_search_no_weights(ordered_encode, ass_size, score,
-                           metrics, steps, directions, additional_constraints):
+                           metrics, steps, directions, additional_constraints, force_levelling_up):
     """Internal helper for grid search.
     The weighted pathway requires x2 memory and computation so instead of compressing the cases
     and computing unweighted as weighted with weights 1, we preserve the old pathway."""
@@ -328,6 +350,11 @@ def grid_search_no_weights(ordered_encode, ass_size, score,
     # now for the computational bottleneck
     bottom = np.zeros(ass_size)
     top = np.asarray([s.shape[0] for s in ordered_encode])
+    if force_levelling_up:
+        if force_levelling_up == '-':
+            bottom += 1
+        else:
+            top -= 1
     score, mesh_indices, step = build_grid(accum_count, bottom, top, metrics, steps=steps)
 
     indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(ass_size, -1)
@@ -337,8 +364,8 @@ def grid_search_no_weights(ordered_encode, ass_size, score,
         tindex = index[:, 1:-1]
     else:
         tindex = index
-    bottom = np.floor(np.maximum(step / 2, tindex.min(1) - step))
-    top = np.ceil(np.minimum(top, tindex.max(1) + step))
+    bottom = np.floor(np.maximum(step / 2, np.maximum(tindex.min(1) - step, bottom)))
+    top = np.ceil(np.minimum(top, np.minimum(tindex.max(1) + step, top)))
     score, mesh_indices, _ = build_grid(accum_count, bottom, top, metrics, steps=steps)
 
     indicies = np.asarray(np.meshgrid(*mesh_indices, sparse=False)).reshape(ass_size, -1)
@@ -346,7 +373,7 @@ def grid_search_no_weights(ordered_encode, ass_size, score,
 
 
 def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
-                        metrics, steps, directions, additional_constraints):
+                        metrics, steps, directions, additional_constraints, force_levelling_up):
     """Internal helper for grid search.
     The weighted pathway requires x2 memory and computation so instead of compressing the cases
     and computing unweighted as weighted with weights 1, we preserve the old pathway.
@@ -364,6 +391,11 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
     # now for the computational bottleneck
     bottom = np.zeros(groups)
     top = np.asarray([s.shape[0] for s in ordered_encode])
+    if force_levelling_up:
+        if force_levelling_up == '-':
+            bottom += 1
+        else:
+            top -= 1
     score, mesh_indices, step = build_grid2((accum_count1, accum_count2), bottom, top, metrics,
                                             steps=steps)
 
@@ -386,7 +418,8 @@ def grid_search_weights(ordered_encode, ordered_encode2, groups, score,
 def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupMetric],
                 hard_assignment: np.ndarray, true_groups: np.ndarray, *, directions=(+1, +1),
                 group_response=False, steps=25, factor=None,
-                additional_constraints=()) -> Tuple[np.ndarray, np.ndarray]:
+                additional_constraints=(),
+                force_levelling_up=False) -> Tuple[np.ndarray, np.ndarray]:
     """Efficient grid search.
     Functions under the assumption data is hard assigned by a group classifer with errors
     and the alignment need not perfectly correspond to groups
@@ -402,8 +435,7 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupM
     directions: (optional) a binary vector containing [+1,-1] indicating if greater or lower
         solutions are prefered
     """
-    assert proba.shape[1] == 2
-    assert proba.ndim == 2
+    assert proba.ndim == 1
     assert y_true.ndim == 1
     assert y_true.shape[0] == proba.shape[0]
     points = y_true.shape[0]
@@ -411,7 +443,9 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupM
     assert hard_assignment.ndim == 1
     assert true_groups.shape[0] == points
     assert true_groups.ndim == 1
-    score = proba[:, 0] - proba[:, 1]
+    # score = proba[:, 0] - proba[:, 1]
+    score = proba
+
     if group_response is not False:
         assert group_response.ndim == 1
         assert points == group_response.shape[0]
@@ -481,11 +515,13 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupM
 
     if unweighted_path:
         score, indicies, front, index = grid_search_no_weights(ordered_encode, ass_size, score,
-                                                               metrics, steps, directions, additional_constraints)
+                                                               metrics, steps, directions, additional_constraints,
+                                                               force_levelling_up)
     else:
         score, indicies, front, index = grid_search_weights(ordered_encode, ordered_encode2,
                                                             ass_size, score, metrics,
-                                                            steps, directions, additional_constraints)
+                                                            steps, directions, additional_constraints,
+                                                            force_levelling_up)
 
     new_front, new_index = keep_front(score, indicies, directions, additional_constraints)
     # merge the two existing fronts
