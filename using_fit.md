@@ -59,6 +59,10 @@ Now let's look at some example uses for `.fit`.
 * Enforce that the selection rate is over 40% for every group.
           `fpredict.fit(gm.accuracy, gm.pos_pred_rate, 0.4)`
     This is the levelling-up version of demographic parity.
+* Enforce approximate demographic parity while forcing the selection rate to increase for every group (achieving equality while avoiding levelling down)
+          `fpredict.fit(gm.accuracy, gm.pos_pred_rate.diff, 0.02, force_levelling_up='+')`
+* Enforce approximate predictive parity while forcing the selection rate to decrease for every group (achieving equality while avoiding levelling down with respect to precision)
+          `fpredict.fit(gm.accuracy, gm.precision.diff, 0.02, force_levelling_up='-')`
 * Pareto efficient minimax fairness
     This enforces that the accuracy over the worst performing pair of (target label, group) is as high as possible, while maximising the overall accuracy (see [Martenez et al.](https://arxiv.org/abs/2011.01821))
           `fpredict.fit(gm.min_accuracy.min, gm.accuracy, 0)`
