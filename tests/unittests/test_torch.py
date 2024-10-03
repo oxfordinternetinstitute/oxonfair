@@ -64,18 +64,19 @@ def test_1_hot(head_width=4):
                                   groups=groups_bin)
 
     fpred.fit(gm.accuracy, gm.demographic_parity, 0.01)
+    assert fpred.evaluate_fairness()['updated']['Statistical Parity'] < 0.01
     fair_network = copy.deepcopy(network)
     fair_network[-1] = fpred.merge_heads_pytorch(network[-1])
     output_fair = np.asarray(fair_network(tensor(np.asarray(train['data'])).float()).detach())
     if head_width > 2:
-        assert performance.evaluate_fairness(train['target'], output_fair.reshape(-1), train['groups']).loc['Statistical Parity'] < 0.01
         assert (performance.evaluate_fairness(train['target'], output_fair.reshape(-1), train['groups'])
                 == fpred.evaluate_fairness()['updated']).all()
         assert np.isclose(performance.evaluate(train['target'], output_fair.reshape(-1)), fpred.evaluate()['updated'], atol=0.001).all()
+        assert performance.evaluate_fairness(train['target'], output_fair.reshape(-1), train['groups']).loc['Statistical Parity'] < 0.01
     else:
-        assert performance.evaluate_fairness(train['target'], output_fair.reshape(-1), groups_bin).loc['Statistical Parity'] < 0.01
         assert (performance.evaluate_fairness(train['target'], output_fair.reshape(-1), groups_bin) == fpred.evaluate_fairness()['updated']).all()
         assert np.isclose(performance.evaluate(train['target'], output_fair.reshape(-1)), fpred.evaluate()['updated'], atol=0.001).all()
+        assert performance.evaluate_fairness(train['target'], output_fair.reshape(-1), groups_bin).loc['Statistical Parity'] < 0.01
 
 
 def test_bin():

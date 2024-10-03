@@ -45,9 +45,12 @@ def compute_metrics(metrics: Sequence[Callable], y_true: np.ndarray, proba: np.n
         then select the max and compute a fairness metric """
     scores = np.zeros((len(metrics), weights.shape[-1]))
     y_true = np.asarray(y_true)
-    # assert weights[:, 1, :].sum() == 0
+    assert proba.ndim == 1
+    assert weights.shape[1] == 2
+    assert weights.shape[0] == threshold_assignment.shape[1]
+    #assert weights[:, 1, :].sum() == 0
     weights = weights[:, 0, :]
-    proba = proba[:, 0] - proba[:, 1]
+
 
     threshold_assignment = np.asarray(threshold_assignment)
 
@@ -218,7 +221,8 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
                                refinement_factor: int = 4,
                                logit_scaling: bool = False,
                                existing_weights: Optional[np.ndarray] = None,
-                               additional_constraints: Sequence = None) -> Tuple[np.ndarray, np.ndarray]:
+                               additional_constraints: Sequence = None,
+                               force_levelling_up=False) -> Tuple[np.ndarray, np.ndarray]:
     """
     this function performs coarse-to-fine grid-search for computing the Pareto front
     """
@@ -227,20 +231,20 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
     assert nr_of_recursive_calls > 0
     groups = groups_infered.shape[1]
 
-    classes = proba.shape[1] - 1  # n.b. this is really classes-1
-    upper_bound = (proba[:, :classes] - proba.min(1)[:, np.newaxis]).max(0)
-    lower_bound = (proba[:, :classes] - proba.max(1)[:, np.newaxis]).min(0)
+    classes = 1  # n.b. this is really classes-1
+    upper_bound = proba.max()
+    lower_bound = proba.min()
     min_initial = np.ones((groups, classes))
-    min_initial[:, :] = lower_bound[:, np.newaxis]
+    min_initial[:, :] = lower_bound
     max_initial = np.ones((groups, classes))
-    max_initial[:, :] = upper_bound[:, np.newaxis]
+    max_initial[:, :] = upper_bound
     # perform an initial two stage search, first coarsely over every possible value
     # then take the front and search over valid values from it
     weights = make_grid_between_points(min_initial, max_initial,
                                        refinement_factor=initial_divisions - 1,
                                        logit_scaling=logit_scaling)
     front = front_from_weights(weights, y_true, proba, groups_infered, metrics)
-    front, weights = keep_front(front, weights, directions, additional_constraints)
+    front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
     # second stage
     mins = weights[:, :-1].min(-1)  # drop zeros
     maxs = weights[:, :-1].max(-1)
@@ -258,7 +262,7 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
         weights = np.concatenate((existing_weights, weights), -1)
         front = np.concatenate((existing_front, front), -1)
 
-    front, weights = keep_front(front, weights, directions, additional_constraints)
+    front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
     for _ in range(nr_of_recursive_calls - 1):
         if weights.shape[-1] != 1:
             eps /= refinement_factor
@@ -267,12 +271,12 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
                                            metrics)
             weights = np.concatenate((new_weights, weights), -1)
             front = np.concatenate((new_front, front), -1)
-            front, weights = keep_front(front, weights, directions, additional_constraints)
+            front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
 
     # densify the front with uniform interpolation
     if weights.shape[-1] > 1:
         weights = linear_interpolate(front, weights, gap=0.02)
         front = front_from_weights(weights, y_true, proba, groups_infered, metrics)
-        front, weights = keep_front(front, weights, directions, additional_constraints)
+        front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
 
     return front, weights
