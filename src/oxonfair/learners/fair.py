@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 class FairPredictor:
     """Assess and mitigate the unfairness and effectiveness of a binary predictor
     post-fit by computing group specific metrics, and performing threshold adjustment.
+
     Parameters
     ----------
     predictor: a binary  predictor that will be evaluated and modified. This can be:
@@ -164,11 +165,15 @@ class FairPredictor:
 
     def _to_numpy(self, x, data, name='groups', none_replace=None) -> Optional[np.ndarray]:
         """helper function for transforming groups into a numpy array of unique values
-        parameters
+
+        Parameters
         ----------
         x: a standard represenations such as might be used for groups (see class doc)
         data: a pandas dataframe or a dict containing data
-        returns
+        name: optional string, the field extracted from data.
+        none_replace: Default value used when nothing else is found.
+
+        Returns
         -------
         numpy array
         """
@@ -198,11 +203,13 @@ class FairPredictor:
 
     def groups_to_numpy(self, groups, data):
         """helper function for transforming groups into a numpy array of unique values
-        parameters
+
+        Parameters
         ----------
-        groups: one of the standard represenations of groups (see class doc)
+        groups: a standard represenations of groups (see class doc)
         data: a pandas dataframe, numpy array, or a dict containing data
-        returns
+
+        Returns
         -------
         numpy array
         """
@@ -210,11 +217,13 @@ class FairPredictor:
 
     def cond_fact_to_numpy(self, fact, data):
         """helper function for transforming fact into a numpy array of unique values
-        parameters
+
+        Parameters
         ----------
         fact: one of the standard represenations of conditioning factor
         data: a pandas dataframe, numpy array, or a dict containing data
-        returns
+
+        Returns
         -------
         numpy array
         """
@@ -243,7 +252,7 @@ class FairPredictor:
             additional_constraints=(), force_levelling_up=False):
         """Fits the chosen predictor to optimize an objective while satisfing a constraint.
 
-        parameters
+        Parameters
         ----------
         objective: a BaseGroupMetric or Scorable to be optimised
         constraint (optional): a BaseGroupMetric or Scorable that must be above/below a certain
@@ -276,7 +285,7 @@ class FairPredictor:
                             If +1 force all weights found to be non-negative  -- i.e. fit can only increase the selection rate.
                             If -1 force all weights found to be non-positive  -- i.e. fit can only decrease the selection rate.
 
-        returns
+        Returns
         -------
         Nothing
         """
@@ -320,7 +329,7 @@ class FairPredictor:
                          force_levelling_up=False) -> None:
         """ Computes the parato frontier. Internal logic used by fit
 
-        parameters
+        Parameters
         ----------
         objective1: a BaseGroupMetric or Scorable to be optimised
         objective2: a BaseGroupMetric or Scorable to be optimised
@@ -336,7 +345,7 @@ class FairPredictor:
         grid_width: allows manual specification of the grid size. N.B. the overall computational
                     budget is O(grid_width**groups)
 
-        returns
+        Returns
         -------
         Nothing
         """
@@ -497,7 +506,8 @@ class FairPredictor:
             These do not need to be the same objectives as used when computing the frontier
             The original predictor, and the predictor selected by fit is shown in different colors.
             fit() must be called first.
-            parameters
+
+            Parameters
             ----------
             data: (optional) pandas dataset or dict. If not specified, uses the data used to run fit.
             groups: (optional) groups data (see class definition). If not specified, uses the
@@ -639,14 +649,16 @@ class FairPredictor:
         """Compute standard metrics of the original predictor and the updated predictor
          found by fit and return them in a dataframe.
           If fit has not been called only return the metrics of the original predictor.
-        parameters
+
+        Parameters
         ----------
         data: (optional) a pandas dataframe to evaluate over. If not provided evaluate over
             the dataset provided at initialisation.
         metrics: (optional) a dictionary where the keys are metric names and the elements are either
                     scoreables or group metrics. If not provided report the standard metrics
                     reported by autogluon on binary predictors
-        returns
+
+        Returns
         -------
         a pandas dataset containing rows indexed by metric name, and columns by
         ['original', 'updated']
@@ -715,14 +727,16 @@ class FairPredictor:
                          metrics, factor, *, verbose=True) -> pd.DataFrame:
         """Helper function for evaluate_fairness
         Report fairness metrics that do not require additional information.
-        parameters
+
+        Parameters
         ----------
         y_true: numpy array containing true binary labels of the dataset
         proba: numpy or pandas array containing the output of predict_proba
         groups: numpy array containing discrete group labelling
         metrics: a dictionary where keys are the names and values are either
         Scorable or a BaseGroupMetric.
-        returns
+
+        Returns
         -------
         a pandas dataframe of fairness metrics
         """
@@ -740,7 +754,8 @@ class FairPredictor:
     def evaluate_groups(self, data=None, groups=None, metrics=None, fact=None, *,
                         return_original=True, verbose=True):
         """Evaluate standard metrics per group and returns dataframe.
-        parameters
+
+        Parameters
         ----------
         data: (optional) a pandas dataframe to evaluate over. If not provided evaluate over
             the dataset provided at initialisation.
@@ -756,7 +771,8 @@ class FairPredictor:
                             scores of the updated classifier under key 'updated'.
                             If return_original is false it returns a dataframe of the scores of the
                             updated classifier only.
-        returns
+
+        Returns
         -------
         either a dict of pandas dataframes or a single pandas dataframe, depending on the value of
         return original.
@@ -812,13 +828,16 @@ class FairPredictor:
 
     def predict_proba(self, data, *, transform_features=True, force_normalization=False):
         """Duplicates the functionality of predictor.predict_proba for fairpredictor.
-        parameters
+
+        Parameters
         ----------
-        data a pandas array to make predictions over.
-        return
+        data a numpy/pandas array to make predictions over.
+
+        Returns
         ------
         a  pandas array of scores. Note, these scores are not probabilities, and not guarenteed to
         be non-negative or to sum to 1.
+
         To make them positive and sum to 1 use force_normalization=True
         """
         if self.groups is None and self.inferred_groups is False:
@@ -887,14 +906,20 @@ class FairPredictor:
 
     def extract_coefficients(self):
         """Extracts coefficients used to combine the heads when creating a fair deep classifier.
+
         This code assumes only two groups and that second head of the model is trained to output single
         values with target values 0 and 1 corresponding to membership of one of two protected groups.
+
         If instead the second head returns  a 1-hot encoding, indicating membership of 2 or more groups,
         use extract_coefficients_1_hot.
+
         This code does not support objects created with use_fast=True.
-        Returns two coefficients.
+
+        Returns
+        -------
         1. a scalar a, and
         2. bias term b.
+
         Such that head_1 + a * head_2 + b has the same outputs as our fair classifier.
         This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier.
         """
@@ -902,11 +927,17 @@ class FairPredictor:
 
     def extract_coefficients_1_hot(self):
         """Extracts coefficients used to combine the heads when creating a fair deep classifier.
+
         This code assumes that second head of the model is trained to output a one hot encoding
         corresponding to membership of a protected group.
         For more compact binary encodings see extract_coeefficents
+
         This code does not support objects created with use_fast=True.
-        Returns a vector coefficient a.
+
+        Returns
+        -------
+        A vector coefficient a.
+
         Such that head_1 + a.dot(head_2) has the same outputs as our fair classifier.
         This can be used to merge the coefficients of the two heads, creating a single-headed fair classifier.
         """
@@ -914,10 +945,20 @@ class FairPredictor:
 
     def merge_heads_pytorch(self, heads):
         """Merges multiple heads into a single head of the same form, that enforces fairness.
-        heads is assumed to be a 2-d torch linear layer of dimension: backbone width by number of heads.
+
+        Parameters
+        ----------
+
+        heads: a 2-d torch linear layer of dimension: backbone width by number of heads.
         The first head is assumed to be the classifier response, and the remainder of heads encode the attributes.
+
         If the number of heads is two we asumme the second-head was trained to enocde a binary attributes with labels roughly 0 and 1.
-        If the number of heads is more than two we assume all heads except the first encode an approximate 1-hot embedding of the attributes"""
+
+        If the number of heads is more than two we assume all heads except the first encode an approximate 1-hot embedding of the attributes
+
+        Returns
+        --------
+        A new linear head of size backbone width x 1 """
         from torch.nn import Linear
         from torch import Tensor
         assert isinstance(heads, Linear)
@@ -943,7 +984,8 @@ class FairPredictor:
 def _needs_groups(func) -> bool:
     """Internal helper function. Check if a metric is a scorer. If not assume it requires a group
     argument.
-    parameters
+
+    Parameters
     ----------
     func either a Scorable or GroupMetric
     """
@@ -953,7 +995,11 @@ def _needs_groups(func) -> bool:
 
 
 def is_not_autogluon(predictor) -> bool:
-    """Internal helper function. Checks if a predictor is not an autogluon fuction."""
+    """Internal helper function. Checks if a predictor is not an autogluon tabular predictor.
+
+    Parameters
+    ----------
+    predictor: some sklearn/autogluon like predictor """
     if AUTOGLUON_EXISTS:
         return not isinstance(predictor, TabularPredictor)
     return True
@@ -971,27 +1017,29 @@ def call_or_get_proba(predictor, data) -> np.ndarray:
 
 
 def _guard_predictor_data_match(data, predictor) -> None:
+    """Internal helper function. Checks that data is in the right format."""
     if (data is not None
         and is_not_autogluon(predictor)
         and not (isinstance(data, dict) and
                  data.get('data', False) is not False and
                  data.get('target', False) is not False)):
-        logger.error("""When not using autogluon data must be a dict containing keys
-                        'data' and 'target'""")
-        assert False
+        assert False, """When not using autogluon data must be a dict containing keys
+                        'data' and 'target'"""
 
 
 def inferred_attribute_builder(train, target, protected, *args, **kwargs):
-    """Helper function that trains tabular predictors suitible for use when the protected attribute
-        is inferred when enforcing fairness.
-        parameters
+    """Helper function that trains autogluon tabular predictors
+    so fairness can be enforced without knowing the protected attribute at test time.
+
+        Parameters
         ----------
         train: a pandas dataframe
         target: a string identifying the column of the dataframe the predictor should try to
         estimate.
         protected: a string identifying the column of the dataframe that represents the
         protected attribute.
-        returns
+
+        Returns
         -------
         a pair of autogluon tabular predictors.
             1. a predictor predicting the target that doesn't use the protected attribute
@@ -1018,8 +1066,10 @@ def groups_to_masks(groups):
 
 
 def fix_groups(metric, groups):
-    """fixes the choice of groups so that BaseGroupMetrics can be passed as Scorable analogs to the
+    """Fixes the choice of groups so that BaseGroupMetrics can be passed as Scorable analogs to the
     slow pathway.
+
+    This substantially decreases runtime in the slow pathway.
 
     Parameters
     ----------
@@ -1128,6 +1178,7 @@ def dispatch_metric(metric, y_true, proba, groups, factor) -> float:
 def single_threshold(x) -> np.ndarray:
     """A helper function. Allows you to measure and enforces fairness and performance measures
     by altering a single threshold for all groups.
+
     To use call FairPredictor with the argument infered_groups=single_threshold"""
     return np.ones((x.shape[0], 1))
 
@@ -1159,11 +1210,18 @@ def DeepDataDict(target, score, groups, groups_inferred=None, *,
     """Wrapper around DataDict for deeplearning with inferred attributes.
      It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
+
+     Parameters
+     ----------
      target: a numpy array containing the values the classifier should predict(AKA groundtruth)
      score: a numpy array that is either size n by 1, and contains a logit output or n by (1 + #groups)
      and is a concatination of the logit output with the inferered groups.
      groups: a numpy array containing true group membership.
      infered_groups: optional numpy array of size n by #groups. If score is n by 1, infered groups go here.
+
+     Returns
+     -------
+     A dict that can be passed to fairpredictor
     """
     assert score.ndim == 2
     assert target.ndim == 1
@@ -1189,6 +1247,10 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
     """Wrapper around FairPredictor for deeplearning with inferred attributes.
      It transforms the input data into a dict, and creates helper functions so
      fairpredictor treats them appropriately.
+
+     Paramters
+     ---------
+
      target: a numpy array containing the values the classifier should predict(AKA groundtruth)
      score: a numpy array that is either size n by 1, and contains a logit output or n by (1 + #groups)
             and is a concatination of the logit output with the inferered groups.
@@ -1200,6 +1262,10 @@ def DeepFairPredictor(target, score, groups, groups_inferred=None,
      use_fast: True, False or 'hybrid' (hybrid is prefered for infered groups. Initialises the slow pathway
             with the output of the fast pathway). By default 'hybrid' unless use_actual_groups is true, in which
             case True
+
+    Returns
+    -------
+    A fairpredictor
      """
     val_data = DeepDataDict(target, score, groups, groups_inferred, conditioning_factor=conditioning_factor)
 
