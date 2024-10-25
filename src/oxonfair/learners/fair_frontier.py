@@ -48,9 +48,7 @@ def compute_metrics(metrics: Sequence[Callable], y_true: np.ndarray, proba: np.n
     assert proba.ndim == 1
     assert weights.shape[1] == 2
     assert weights.shape[0] == threshold_assignment.shape[1]
-    #assert weights[:, 1, :].sum() == 0
     weights = weights[:, 0, :]
-
 
     threshold_assignment = np.asarray(threshold_assignment)
 
