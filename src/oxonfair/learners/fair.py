@@ -1012,7 +1012,13 @@ def call_or_get_proba(predictor, data) -> np.ndarray:
     if isinstance(data, dict):
         data = data['data']
     if callable(predictor):
-        return np.asarray(predictor(data))
+        out = np.asarray(predictor(data))
+        if out.ndim == 1:
+            width = out.max()+1
+            new_out = np.zeros((out.shape[0], width))
+            new_out[(np.arange(out.shape[0]), out)] = 1
+            return new_out
+        return out
     return np.asarray(predictor.predict_proba(data))
 
 
