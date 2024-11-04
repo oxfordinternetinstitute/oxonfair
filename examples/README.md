@@ -2,7 +2,7 @@
 
 This folder contains a collection of example ipython notebooks illustrating different use cases.
 
-1. [Getting started with XGBoost](quickstart_xboost.ipynb)
+1. [Getting started with XGBoost](quickstart_xgboost.ipynb)
 2. [Getting started with Autogluon](quickstart_autogluon.ipynb)
 3. [Getting started with Deep Learning and Computer Vision](quickstart_DeepFairPredictor_computer_vision.ipynb)
 4. [Code for training deep models compatible with OxonFair](training_a_two_head_model/two_head_model_demo.py)
