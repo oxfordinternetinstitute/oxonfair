@@ -62,8 +62,9 @@ def test_md_links():
 
     for link in missing_links_eg:
         warnings.warn(link)
-    assert missing_links == []
+
     assert missing_links_eg == []
+    assert missing_links == []
 
 
 def test_run_notebooks_without_errors():
