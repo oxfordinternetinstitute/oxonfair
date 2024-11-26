@@ -720,6 +720,9 @@ class FairPredictor:
 
             collect = pd.concat([collect, new_pd], axis='columns')
             collect.columns = ['original', 'updated']
+        else:
+            collect = pd.concat([collect,], axis='columns')
+            collect.columns = ['original']
 
         return collect
 
@@ -822,7 +825,9 @@ class FairPredictor:
                                           verbose=verbose)
 
         out = updated
-        if return_original:
+        if self.frontier is None:
+            out = pd.concat([updated, ], keys=['original', ])
+        elif return_original:
             out = pd.concat([original, updated], keys=['original', 'updated'])
         return out
 
