@@ -102,9 +102,11 @@ def test_conflict_groups():
 def test_fit_creates_updated(use_fast=True):
     """eval should return 'updated' iff fit has been called"""
     fpredictor = FairPredictor(predictor, val_dict, use_fast=use_fast)
-    assert isinstance(fpredictor.evaluate(), pd.Series)
+    assert not isinstance(fpredictor.evaluate(), pd.Series)
+    assert 'original' in fpredictor.evaluate().columns
     fpredictor.fit(gm.accuracy, gm.recall, 0)  # constraint is intentionally slack
     assert not isinstance(fpredictor.evaluate(), pd.Series)
+    assert 'original' in fpredictor.evaluate().columns
     assert 'updated' in fpredictor.evaluate().columns
 
 

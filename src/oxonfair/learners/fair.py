@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from ..utils import group_metrics
 from .. utils.scipy_metrics_cont_wrapper import ScorerRequiresContPred
-from ..utils.group_metric_classes import BaseGroupMetric
+from ..utils.group_metric_classes import BaseGroupMetric, Overall
 
 from ..utils import performance as perf
 from . import efficient_compute, fair_frontier
@@ -720,6 +720,9 @@ class FairPredictor:
 
             collect = pd.concat([collect, new_pd], axis='columns')
             collect.columns = ['original', 'updated']
+        else:
+            collect = pd.concat([collect,], axis='columns')
+            collect.columns = ['original']
 
         return collect
 
@@ -822,7 +825,9 @@ class FairPredictor:
                                           verbose=verbose)
 
         out = updated
-        if return_original:
+        if self.frontier is None:
+            out = pd.concat([updated, ], keys=['original', ])
+        elif return_original:
             out = pd.concat([original, updated], keys=['original', 'updated'])
         return out
 
@@ -1093,6 +1098,9 @@ def fix_groups(metric, groups):
 
     groups = groups_to_masks(groups)
 
+    if isinstance(metric, Overall):  # Performance hack. If metric is of type overall, groups don't matter -- assign all groups to 1.
+        groups = np.ones(groups.shape[0])
+
     def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
         return metric(y_true, y_pred, groups)
     return new_metric
@@ -1145,6 +1153,10 @@ def fix_groups_and_conditioning(metric, groups, conditioning_factor, y_true):
     groups = np.asarray(groups)
     weights = metric.cond_weights(conditioning_factor, groups, y_true)
     groups = groups_to_masks(groups)
+
+    if isinstance(metric, Overall):  # Performance hack. If metric is of type overall, groups don't matter -- assign all groups to 1.
+        groups = np.ones(groups.shape[0])
+
 
     def new_metric(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
         return metric(y_true, y_pred, groups, weights)
