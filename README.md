@@ -56,6 +56,51 @@ For pytorch, see a toy example on [adult](./examples/pytorch_minimal_demo.ipynb)
 
 More demo notebooks are present in the [examples folder](./examples/README.md).
 
+## Demo using probabilities
+
+    # Load libraries
+    import numpy as np
+    from oxonfair import FairPredictor
+    from oxonfair import group_metrics as gm
+
+    # Prep example data
+    n_samples_vali = 100
+    n_samples_test = 100
+    vali_target = np.random.randint(0, 2, size=n_samples_vali)
+    vali_pred_prob = np.random.rand(n_samples_vali)
+    vali_groups = np.random.randint(0, 2, size=n_samples_vali)
+    test_target = np.random.randint(0, 2, size=n_samples_test)
+    test_pred_prob = np.random.rand(n_samples_test)
+    test_groups = np.random.randint(0, 2, size=n_samples_test)
+
+    # Convert to correct format
+    vali_dict = {
+        "target": vali_target,
+        "data": np.array((1 - vali_pred_prob, vali_pred_prob)).T,
+        "groups": vali_groups
+    }
+    test_dict = {
+        "target": test_target,
+        "data": np.array((1 - test_pred_prob, test_pred_prob)).T,
+        "groups": test_groups
+    }
+
+    # Get and train the threshold calibrator
+    fpred = FairPredictor(predictor=None, validation_data=vali_dict)
+    fpred.fit(gm.accuracy, gm.recall.diff, 0.02)
+
+    # Evaluate on vali data
+    print(fpred.evaluate(vali_dict))
+    # print(fpred.evaluate_groups(vali_dict))
+    # print(fpred.evaluate_fairness(vali_dict))
+
+    # Evaluate on test data
+    print(fpred.evaluate(test_dict))
+
+    # Get predictions
+    corrected_test_pred = fpred.predict(test_dict)
+
+
 ## Demo using XGBoost
 
     # Load libraries

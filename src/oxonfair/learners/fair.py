@@ -79,6 +79,10 @@ class FairPredictor:
         if predictor is None:
             def predictor(x):
                 return x
+            if isinstance(validation_data, dict):
+                assert validation_data["data"].ndim == 2, "If predictor is None, validation_data['data'] must be a 2D array of predicted probabilities"
+            else:
+                assert validation_data.ndim == 2, "If predictor is None, validation_data must be a 2D array of predicted probabilities"
         if not is_not_autogluon(predictor) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
 
