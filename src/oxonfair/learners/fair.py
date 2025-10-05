@@ -2,6 +2,7 @@
 functionality."""
 from ast import Tuple
 from typing import Optional
+import copy
 import logging
 import numpy as np
 import pandas as pd
@@ -849,6 +850,7 @@ class FairPredictor:
 
         To make them positive and sum to 1 use force_normalization=True
         """
+        data = copy.deepcopy(data)
         if self.groups is None and self.inferred_groups is False:
             _guard_predictor_data_match(data, self.predictor)
         if self.groups is None and isinstance(data, dict):
