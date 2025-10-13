@@ -12,4 +12,4 @@ This folder contains a collection of example ipython notebooks illustrating diff
    - A comparison using xgboost on medical data. [Here](high-dim_fairlearn_comparision.ipynb)
    - A comparison of run time using xgboost on multiple groups. [Here](multi_group_fairlearn_comparision.ipynb)
 7. A Comparision with [Fairret](./fairret.ipynb).
-9. [Getting started with probabilities](quickstart_prediction_probas.ipynb)
+8. [Getting started with probabilities](quickstart_prediction_probas.ipynb)
