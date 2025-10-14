@@ -41,7 +41,6 @@ GitHub provides additional document on [forking a repository](https://help.githu
 ## Tips for Modifying the Source Code
 
 - Use a fresh virtualenv.
-- We recommend developing on Linux when using autogluon as this is the only OS where all features are currently 100% functional. Avoid introducing changes that will only work on a particular OS.
 
 
 - Please try to avoid introducing additional dependencies on 3rd party packages. We are currently working to reduce the number of external dependencies of our package.
@@ -64,8 +63,6 @@ python3 -m pytest path_to_file
 
 - Remember to update all existing examples/tutorials/documentation affected by your code changes.
 
-- We also encourage you to contribute new tutorials or example scripts for applications you think other users will be interested in. Please see `examples/`. All tutorials should be Jupyter notebooks converted into markdown (.md) files by running the command `jupyter nbconvert --ClearOutputPreprocessor.enabled=True --to markdown tutorial.ipynb`. This command also clears out any output cells as our build system will rebuild the .ipynb files from the markdown file and execute the notebooks rendering the output on our website. This is especially important for major new functionality. You can also directly edit .md files in a Jupyter notebook via these steps: https://d2l.ai/chapter_appendix-tools-for-deep-learning/jupyter.html#markdown-files-in-jupyter
-
 - After you open your pull request, our CI system will run for little while to check your code and report found errors. Please check back and fix any errors encountered at this stage (you can retrigger a new CI check by pushing updated code to the same PR in a new commit).
 
 
@@ -83,6 +80,6 @@ opensource-codeofconduct@amazon.com with any additional questions or comments.
 
 ## Licensing
 
-See the [LICENSE](https://github.com/autogluon/autogluon/blob/master/LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
+See the [LICENSE](./LICENSE) file for our project's licensing. We will ask you to confirm the licensing of your contribution.
 
 We may ask you to sign a [Contributor License Agreement (CLA)](http://en.wikipedia.org/wiki/Contributor_License_Agreement) for larger changes.

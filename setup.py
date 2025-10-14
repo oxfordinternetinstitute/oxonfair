@@ -57,7 +57,7 @@ def default_setup_args(*, version):
         long_description=long_description,
         long_description_content_type="text/markdown",
         license="Apache-2.0",
-        license_files=("LICENSE", "NOTICE"),
+        license_files=("LICENSE",),
         # Package info
         package_dir={"": "src"},
         packages=find_packages("src"),
@@ -76,7 +76,6 @@ def default_setup_args(*, version):
             "Intended Audience :: Financial and Insurance Industry",
             "Intended Audience :: Healthcare Industry",
             "Intended Audience :: Telecommunications Industry",
-            "License :: OSI Approved :: Apache Software License",
             "Operating System :: MacOS",
             "Operating System :: Microsoft :: Windows",
             "Operating System :: POSIX",
