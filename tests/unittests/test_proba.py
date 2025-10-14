@@ -8,7 +8,7 @@ from oxonfair import group_metrics as gm
 
 def test_validation_data_immutable():
     """Test that validation data does not change after evaluation.
-    
+
     This test verifies that the deepcopy protection in FairPredictor.predict_proba
     prevents modification of the original validation data during evaluation.
     """
@@ -32,10 +32,20 @@ def test_validation_data_immutable():
     fpred = FairPredictor(predictor=None, validation_data=data_dict)
     fpred.fit(gm.accuracy, gm.true_pos_rate.diff, 0.05)
 
-    # Evaluate fairness on data
-    fpred.evaluate_fairness(data_dict)
+    fpred.evaluate_fairness()
+    # Check that original data is unchanged after calling fit + evaluation
+    np.testing.assert_array_equal(data_dict["target"], original_data_dict["target"])
+    np.testing.assert_array_equal(data_dict["data"], original_data_dict["data"])
+    np.testing.assert_array_equal(data_dict["groups"], original_data_dict["groups"])
 
-    # Check that original data is unchanged
+    fpred.predict_proba(data_dict)
+    # Check that original data is unchanged after calling predict_proba
+    np.testing.assert_array_equal(data_dict["target"], original_data_dict["target"])
+    np.testing.assert_array_equal(data_dict["data"], original_data_dict["data"])
+    np.testing.assert_array_equal(data_dict["groups"], original_data_dict["groups"])
+
+    fpred.predict(data_dict)
+    # Check that original data is unchanged after calling predict
     np.testing.assert_array_equal(data_dict["target"], original_data_dict["target"])
     np.testing.assert_array_equal(data_dict["data"], original_data_dict["data"])
     np.testing.assert_array_equal(data_dict["groups"], original_data_dict["groups"])

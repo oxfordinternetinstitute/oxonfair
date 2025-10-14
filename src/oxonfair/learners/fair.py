@@ -79,7 +79,7 @@ class FairPredictor:
                  use_fast=True, conditioning_factor=None, threshold=2/3) -> None:
         if predictor is None:
             def predictor(x):
-                return x
+                return copy.deepcopy(x)
         if not is_not_autogluon(predictor) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
 
