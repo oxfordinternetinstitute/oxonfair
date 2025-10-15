@@ -6,7 +6,9 @@ Unlike other toolkits it is designed and works for computer vision and NLP probl
 
 Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing) or read the [NeurIPS paper](https://arxiv.org/abs/2407.13710).
 
-For low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
+Experimentally, we outperform, or are at worst comparable, to other existing fairness approaches when using high-capacity models.
+
+However, for standard fairness definitions and low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), it is possible to outperform us, and we recommend also trying [fairlearn](https://github.com/fairlearn/fairlearn).
 
 We support a range of complex classifiers including [pytorch](https://pytorch.org/), [scikit learn](https://scikit-learn.org/stable/), and ensembles provided by [autogluon](https://auto.gluon.ai/stable/index.html).
 
@@ -20,7 +22,7 @@ In the terminal type:
 
     pip install 'oxonfair[full]'
 
-This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, pytorch, and XGBoost. If this is too many dependencies, try a minimal install.
+This will download and install enough code to run any notebooks except those comparing with fairlearn. This includes autogluon, PyTorch, and XGBoost. If this is too many dependencies, try a minimal install.
 
 ### Minimal install
 
@@ -44,7 +46,7 @@ Download the source of OxonFair and in the source directory run:
 
     pip install -e .\[tests\]
 
-You probably don't want to install this unless you're looking to modify the codebase.
+This is only needed if you're looking to modify the codebase.
 
 ## Examples
 
@@ -65,7 +67,7 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
 
     # Download and partition the adult dataset into training and test data
     train_data, _, test_data = dataset_loader.adult('sex', train_proportion=0.7, test_proportion=0.3)
-    # Train an XGBoost classifier on the training set                                              
+    # Train an XGBoost classifier on the training set
     predictor = xgboost.XGBClassifier().fit(X=train_data['data'], y=train_data['target'])
 
     # Specify that we want to create a fair predictor by reusing the training set
@@ -75,7 +77,7 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
 
     # Enforce demographic parity to within 2%
     fpredict.fit(gm.accuracy, gm.demographic_parity, 0.02)
-    
+
     # Evaluate per_group on the test set
     fpredict.evaluate_groups(test_data)
 
@@ -123,7 +125,7 @@ In brief, the steps are:
 1. Train your network.
 2. Call `DeepFairPredictor` with the network output on validation data.
 3. Call `fit` to enforce fairness. Use `evaluate_groups` and `plot_frontier` to explore trade-offs.
-4. Use `merge_heads_pytorch` to generate a fair network.  
+4. Use `merge_heads_pytorch` to generate a fair network.
 
 #### Fine-grained control of behavior
 
@@ -161,7 +163,7 @@ We provide support for the utility-based approach set out in [Fairness On The Gr
 
 Utility functions can be defined in one line.
 
-For example, consider a situation where an ML system identifies potential problems that require intervening. 
+For example, consider a situation where an ML system identifies potential problems that require intervening.
 
 Every intervention may have a cost of 1, regardless of if it was needed, but a missed intervention that was needed has a cost of 5. Finally, not making an intervention when one was unneeded has a cost of 0. This can be written as:
 
