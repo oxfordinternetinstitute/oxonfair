@@ -4,7 +4,7 @@ OxonFair is an expressive toolkit designed to enforce a wide-range of fairness d
 The toolkit is designed to overcome a range of shortcomings in existing fairness toolkits for high-capacity models that overfit to the training data.
 Unlike other toolkits it is designed and works for computer vision and NLP problems alongside tabular data.
 
-Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing) or read the [preprint](https://arxiv.org/abs/2407.13710).
+Check out the colab demo [here](https://colab.research.google.com/drive/1CfcS3AX7M2MO1wW33wU1LDiY5DwtyyxH?usp=sharing) or read the [NeurIPS paper](https://arxiv.org/abs/2407.13710).
 
 For low-capacity models (e.g., logistic regression over a small number of variables, and decision-trees of limited depth), we recommend [fairlearn](https://github.com/fairlearn/fairlearn).
 
@@ -81,7 +81,7 @@ More demo notebooks are present in the [examples folder](./examples/README.md).
 
 ## Overview
 
-OxonFair is a postprocessing approach for enforcing fairness, with support for a wide range of performance metrics and fairness criteria, and support for inferred attributes, i.e., it does not require access to protected attributes at test time.
+OxonFair is a postprocessing approach for enforcing fairness, with support for a wide range of performance metrics and fairness criteria, that does not require access to protected attributes at test time.
 Under the hood, FairPredictor works by adjusting the decision boundary for each group individually. Where groups are not available, it makes use of inferred group membership to adjust decision boundaries.
 
 The key idea underlying this toolkit is that for a wide range of use cases, the most suitable classifier should do more than maximize some form of accuracy.
@@ -107,15 +107,15 @@ The full set of constraints and objectives can be seen in the list of measures i
 
 ### Why Another Fairness Library?
 
-Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. These classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g., when using equal opportunity) on the training data, is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punitively slow when training the model once might take days, or even weeks, if you are trying to maximize performance.
+Fundamentally, most existing fairness methods are not appropriate for use with complex classifiers on high-dimensional data. These classifiers are prone to overfitting on the training data, which means that trying to balance error rates (e.g., when using equal opportunity) on the training data is unlikely to transfer well to new unseen data. This is a particular problem when using computer vision (see [Zietlow et al.](https://arxiv.org/abs/2203.04913)), but can also occur with tabular data. Moreover, iteratively retraining complex models (a common requirement of many methods for enforcing fairness) is punitively slow when training the model once might take days, or even weeks, if you are trying to maximize performance.
 
-At the same time, postprocessing methods which allow you to train once, and then improve fairness on held-out validation data generally require the protected attributes to be available at test time, which is often infeasible, particularly with computer vision.
+At the same time, postprocessing methods which allow you to train once and then improve fairness on held-out validation data, generally require the protected attributes to be available at test time, which is often infeasible, particularly with computer vision.
 
 OxonFair is built from the ground up to avoid these issues. It is a postprocessing approach, explicitly designed to use inferred attributes where protected attributes are not available to enforce fairness. Fairness can be enforced both on validation, or on the train set, when you are short of data and overfitting is not a concern. When enforcing fairness in deep networks or using provided attributes, a classifier is only trained once, for non network-based approaches, e.g., scikit-learn or xgboost, with inferred attributes we require the training of two classifier (one to predict the original task, and a second to estimate groups membership).
 
-That said, we make several additional design decisions which we believe make for a better experience for data scientists:
+We make several additional design decisions that we believe make for a better experience for data scientists:
 
-#### Direct support for pytorch including NLP and Computer Vision
+#### Direct support for PyTorch including NLP and Computer Vision
 
 See [here](./examples/pytorch_minimal_demo.ipynb) for an example.
 In brief, the steps are:
@@ -127,7 +127,7 @@ In brief, the steps are:
 
 #### Fine-grained control of behavior
 
-##### Wide Choice of performance measure
+##### Wide Choice of Performance Measures
 
 Unlike other approaches to fairness, FairPredictor allows the optimization of arbitrary performance measures such as F1 or MCC, subject to fairness constraints. This can substantially improve the fairness/performance trade-off with, for example, F1 scores frequently being 3-4% higher when directly optimized for rather than accuracy.
 
@@ -157,7 +157,7 @@ These constraints have wider uses outside of fairness. For example, a classifier
 
 ##### Support for Utility based approaches
 
-We provide support for the utility based approach set out in [Fairness On The Ground: Applying Algorithmic Fairness Approaches To Production Systems](https://arxiv.org/pdf/2103.06172.pdf), whereby different thresholds can be selected per group to optimize a utility-based objective.
+We provide support for the utility-based approach set out in [Fairness On The Ground: Applying Algorithmic Fairness Approaches To Production Systems](https://arxiv.org/pdf/2103.06172.pdf), whereby different thresholds can be selected per group to optimize a utility-based objective.
 
 Utility functions can be defined in one line.
 
@@ -179,7 +179,7 @@ optimizes the utility subject to the requirement that the classifier accuracy ca
 
 ##### Support for user-specified performance and fairness measures
 
-As well as providing support for enforcing a wide range of performance and fairness measures, we allow users to define their own metrics and fairness measures.
+We allow users to define their own metrics and fairness measures. as well as providing support for enforcing a wide range of performance and fairness measures.
 
 For example, a custom implementation of recall can be defined as:
 
@@ -194,7 +194,7 @@ Given a pretrained binary predictor, we define a fair classifier that will allow
 
     fpredictor = FairPredictor(predictor,  validation_data, 'sex')
 
-the fit function takes three arguments that describe an objective such as accuracy or F1 that should be optimized, and a constraint such as the demographic parity violation should be below 2%.
+The fit function takes three arguments that describe an objective such as accuracy or F1 that should be optimized, and a constraint such as the demographic parity violation should be below 2%.
 
 This takes the form:
 
@@ -233,7 +233,7 @@ By default, this method reports the standard fairness metrics of SageMaker Clari
 
     fpredictor.evaluate_groups(data (optional), groups (optional), dictionary_of_methods (optional), return_original=False, verbose=False)
 
-By default this method reports, per group, the standard binary evaluation criteria of autogluon for both the updated predictor only, over the data used by fit. The behavior can be altered by providing either alternate data or a new dictionary of methods. Where groups is not provided, it will use the same groups as passed to `fit`, but this can be altered. If you wish to also see the per group performance of the original classifier, use `return_original=True` to receive a dict containing the per_group performance of the original and updated classifier. If verbose is set to true, the table contains the long names of methods, otherwise it reports the dictionary keys.
+By default, this method reports, per group, the standard binary evaluation criteria of autogluon for both the updated predictor only, over the data used by fit. The behavior can be altered by providing either alternate data or a new dictionary of methods. Where groups is not provided, it will use the same groups as passed to `fit`, but this can be altered. If you wish to also see the per group performance of the original classifier, use `return_original=True` to receive a dict containing the per_group performance of the original and updated classifier. If verbose is set to true, the table contains the long names of methods, otherwise it reports the dictionary keys.
 
 ### Fairness using Inferred Attributes
 
