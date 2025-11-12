@@ -221,7 +221,7 @@ class UCI_raw:
 
 
 def replace_nan(X):
-    X.fillNa(-1)
+    X.fillna(-1)
     return X
 
 
