@@ -1208,7 +1208,7 @@ def single_threshold(x) -> np.ndarray:
     by altering a single threshold for all groups.
 
     To use call FairPredictor with the argument infered_groups=single_threshold"""
-    return np.zeros((x.shape[0], 1))
+    return np.ones((x.shape[0], 1))
 
 
 def DataDict(target, data, groups=None, conditioning_factor=None) -> dict:
