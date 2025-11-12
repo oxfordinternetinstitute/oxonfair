@@ -530,13 +530,15 @@ class FairPredictor:
         import matplotlib.pyplot as plt  # noqa: C0415
         assert self.frontier is not None, 'Call fit before plot_frontier.'
         _guard_predictor_data_match(data, self.predictor)
+
+        objective1 = objective1 or self.objective1
+        objective2 = objective2 or self.objective2
+
         if transpose:
             tmp = objective1
             objective1 = objective2
             objective2 = tmp
 
-        objective1 = objective1 or self.objective1
-        objective2 = objective2 or self.objective2
         if not subfig and new_plot:
             plt.figure()
         if subfig:
