@@ -502,7 +502,7 @@ class FairPredictor:
 
     def plot_frontier(self, data=None, groups=None, *, objective1=False, objective2=False,
                       show_updated=True, show_original=True, color=None, new_plot=True, prefix='',
-                      name_frontier='Frontier', subfig=None) -> None:
+                      name_frontier='Frontier', subfig=None, transpose=False) -> None:
         """ Plots an existing parato frontier with respect to objective1 and objective2.
             These do not need to be the same objectives as used when computing the frontier
             The original predictor, and the predictor selected by fit is shown in different colors.
@@ -521,13 +521,20 @@ class FairPredictor:
                 different marker
             color: (optional, default None) Specify the color the frontier should be plotted in.
             new_plot: (optional, default True) specifies if plt.figure() should be called at the
-            start or if an existing plot should be overlayed
+                        start or if an existing plot should be overlayed
             prefix (optional string) an additional prefix string that will be added to the legend
-            for frontier and updated predictor.
+                        for frontier and updated predictor.
+            subfig: (Optional default None) an existing subfig to plot the frontier in
+            transpose: (Optional False) If True swap the axes.
         """
         import matplotlib.pyplot as plt  # noqa: C0415
         assert self.frontier is not None, 'Call fit before plot_frontier.'
         _guard_predictor_data_match(data, self.predictor)
+        if transpose:
+            tmp = objective1
+            objective1 = objective2
+            objective2 = tmp
+
         objective1 = objective1 or self.objective1
         objective2 = objective2 or self.objective2
         if not subfig and new_plot:
