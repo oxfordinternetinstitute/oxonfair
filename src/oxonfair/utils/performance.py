@@ -9,6 +9,7 @@ import pandas as pd
 from . import group_metrics
 from .group_metric_classes import BaseGroupMetric
 from .scipy_metrics_cont_wrapper import ScorerRequiresContPred
+import collections.abc
 
 AUTOGLUON_EXISTS = True
 try:
@@ -183,7 +184,7 @@ def dispatch_metric(metric, y_true, proba, groups, factor, *, threshold) -> floa
         if isinstance(metric, BaseGroupMetric):
             if metric.cond_weights is None:
                 return metric(y_true, proba > threshold, groups)[0]
-            return metric(y_true, proba > threshold, groups, factor)[0]
+            return metric(y_true, proba > threshold, groups, factor).reshape(-1)[0]
 
         if isinstance(metric, ScorerRequiresContPred) or (
                 AUTOGLUON_EXISTS
