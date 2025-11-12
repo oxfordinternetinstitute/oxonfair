@@ -200,7 +200,7 @@ class GroupRatio(BaseGroupMetric):
         val = self.func(*array)
         with np.errstate(divide='ignore'):
             broadcast = val[:, np.newaxis, :] / val[:, :, np.newaxis]
-        trunc = np.minimum(broadcast, 1.0/broadcast)
+            trunc = np.minimum(broadcast, 1.0 / broadcast)
         trunc[~np.isfinite(trunc)] = 1
         idx = np.arange(trunc.shape[-1])
         trunc[:, idx, idx] = 0
