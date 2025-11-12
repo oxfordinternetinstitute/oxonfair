@@ -166,5 +166,5 @@ def test_wachter_slow():
     test_wachter(False)
 
 
-def automated_hybrid():
+def test_wachter_hybrid():
     test_wachter('hybrid')

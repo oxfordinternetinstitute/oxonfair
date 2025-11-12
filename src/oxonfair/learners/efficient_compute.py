@@ -464,7 +464,7 @@ def grid_search(y_true: np.ndarray, proba: np.ndarray, metrics: Tuple[BaseGroupM
     assigned_labels = np.arange(hard_assignment.max()+1)
     groups = true_groups.max() + 1
     uniq = np.unique(hard_assignment)
-    if uniq.size < assigned_labels.size:
+    if uniq.size < assigned_labels.size and uniq != [1]:  # Don't check if is single threshold
         logger.warning('Some groups were not assigned, we only saw: %s', np.array2string(uniq))
 
     if groups > assigned_labels.size:

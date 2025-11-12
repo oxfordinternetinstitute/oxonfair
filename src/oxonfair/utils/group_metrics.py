@@ -22,7 +22,7 @@ count = GroupMetric(lambda TP, FP, FN, TN: TP + FP + FN + TN, "Number of Datapoi
 pos_data_count = GroupMetric(lambda TP, FP, FN, TN: TP + FN, "Positive Count")
 neg_data_count = GroupMetric(lambda TP, FP, FN, TN: FP + TN, "Negative Count")
 pos_data_rate = GroupMetric(
-    lambda TP, FP, FN, TN: (TP + FN) / (TP + FP + FN + TN), "Positive Label Rate"
+    lambda TP, FP, FN, TN: (TP + FN) / (TP + FP + FN + TN), "Positive Label Rate",
 )
 neg_data_rate = GroupMetric(
     lambda TP, FP, FN, TN: (TN + FP) / (TP + FP + FN + TN), "Negative Label Rate"
@@ -42,16 +42,16 @@ true_neg_rate = GroupMetric(
     lambda TP, FP, FN, TN: (TN) / ge1(FP + TN), "True Negative Rate"
 )
 false_pos_rate = GroupMetric(
-    lambda TP, FP, FN, TN: (FP) / ge1(FP + TN), "False Positive Rate"
+    lambda TP, FP, FN, TN: (FP) / ge1(FP + TN), "False Positive Rate", False
 )
 false_neg_rate = GroupMetric(
-    lambda TP, FP, FN, TN: (FN) / ge1(TP + FN), "False Negative Rate"
+    lambda TP, FP, FN, TN: (FN) / ge1(TP + FN), "False Negative Rate", False
 )
 pos_pred_val = GroupMetric(
     lambda TP, FP, FN, TN: (TP) / ge1(TP + FP), "Positive Predicted Value"
 )
 neg_pred_val = GroupMetric(
-    lambda TP, FP, FN, TN: (TN) / ge1(TN + FN), "Negative Predicted Value"
+    lambda TP, FP, FN, TN: (TN) / ge1(TN + FN), "Negative Predicted Value",
 )
 
 # Existing binary metrics for autogluon
@@ -198,11 +198,11 @@ default_fairness_measures = verma_metrics
 # Here we define standard fairness measures that require more than per group difference/ratios
 
 # We start with the unconditional forms of fairness from "why fairness can not be automated"
-pos_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TP+FP)/ge1(TTP+TFP)[:, np.newaxis],
+pos_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TP+FP) / ge1(TTP+TFP)[:, np.newaxis],
                                   'Proportion of Positive Preditions', total_metric=True)
-neg_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TN+FN)/ge1(TTN+TFN)[:, np.newaxis],
+neg_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: (TN+FN) / ge1(TTN+TFN)[:, np.newaxis],
                                   'Proportion of Negative Predictions', total_metric=True)
-diff_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: ((TP+FP)/ge1(TTP+TFP)[:, np.newaxis])
+diff_pred_proportion = GroupMetric(lambda TP, FP, FN, TN, TTP, TFP, TFN, TTN: ((TP+FP) / ge1(TTP+TFP)[:, np.newaxis])
                                    - (TN+FN)/ge1(TTN+TFN)[:, np.newaxis],
                                    'Difference of Proportions of Predictions', total_metric=True)
 

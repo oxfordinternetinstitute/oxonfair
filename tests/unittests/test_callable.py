@@ -1,7 +1,7 @@
 import numpy as np
 import oxonfair
 from oxonfair.utils import group_metrics as gm
-
+from matplotlib import pyplot as plt
 
 val = np.random.randn(1000, 2)  #
 val_target = np.random.randn(1000) > 0
@@ -54,7 +54,9 @@ def test_fairdeep(use_fast=True, use_true_groups=False):
     tmp = np.asarray(fpred.evaluate(metrics={'eo': gm.equal_opportunity}))[0, 1]
     assert tmp < 0.01
     fpred.plot_frontier()
+    plt.close()
     fpred.plot_frontier(test_dict)
+    plt.close()
     fpred.evaluate()
     fpred.evaluate(test_dict)
     fpred.evaluate_fairness()
