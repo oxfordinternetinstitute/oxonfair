@@ -188,7 +188,7 @@ class GroupDiff(BaseGroupMetric):
         val = self.func(*array)
         broadcast = val[:, np.newaxis, :] - val[:, :, np.newaxis]
         trunc = np.maximum(broadcast, 0)
-        collate = trunc.sum(1).sum(1) / (val.shape[1] * (val.shape[1] - 1) / 2)
+        collate = trunc.sum(1).sum(1) / max(1, val.shape[1] * (val.shape[1] - 1) / 2)
         return collate
 
 
@@ -198,7 +198,7 @@ class GroupRatio(BaseGroupMetric):
     def __call__(self, *args: np.ndarray) -> np.ndarray:
         array = self.build_array(args)
         val = self.func(*array)
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore',invalid='ignore'):
             broadcast = val[:, np.newaxis, :] / val[:, :, np.newaxis]
             trunc = np.minimum(broadcast, 1.0 / broadcast)
         trunc[~np.isfinite(trunc)] = 1
