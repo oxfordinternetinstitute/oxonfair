@@ -9,6 +9,7 @@ try:
     from autogluon.core.metrics import Scorer
 except ModuleNotFoundError:
     AUTOGLUON_EXISTS = False
+    Scorer = False
 
 
 def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
@@ -81,7 +82,6 @@ def sort_by_front(front: np.ndarray, weights: np.ndarray) -> Tuple[np.ndarray, n
     weights = weights[:, :, sort_ind]
     front = front[:, sort_ind]
     return front, weights
-
 
 
 def linear_interpolate(front: np.ndarray, weights: np.ndarray, gap: float = 0.01) -> np.ndarray:
@@ -242,7 +242,6 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
     front = front_from_weights(weights, y_true, proba, groups_infered, metrics)
     front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
 
-
     # second stage
     mins = weights[:, :-1].min(-1)  # drop zeros
     maxs = weights[:, :-1].max(-1)
@@ -262,7 +261,6 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
 
     front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
 
-
     for _ in range(nr_of_recursive_calls - 1):
         if weights.shape[-1] != 1:
             eps /= refinement_factor
@@ -273,12 +271,10 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
             front = np.concatenate((new_front, front), -1)
             front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
 
-
     # densify the front with uniform interpolation
     if weights.shape[-1] > 1:
         weights = linear_interpolate(front, weights, gap=0.02)
         front = front_from_weights(weights, y_true, proba, groups_infered, metrics)
         front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
-
 
     return front, weights
