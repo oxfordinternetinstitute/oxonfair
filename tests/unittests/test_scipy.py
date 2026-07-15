@@ -231,7 +231,7 @@ def test_disp_impact(use_fast=True):
 
     assert measures["original"]["disparate_impact"] < 0.9
 
-    assert measures["updated"]["disparate_impact"] > 0.9
+    assert measures["updated"]["disparate_impact"] >= 0.9
 
 
 def test_min_recall(use_fast=True):

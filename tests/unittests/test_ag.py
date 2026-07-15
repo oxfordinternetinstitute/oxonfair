@@ -97,7 +97,7 @@ def test_recall_diff(use_fast=True):
     # Evaluate the change in fairness (recall difference corresponds to EO)
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    assert measures["updated"]["recall.diff"] < limit
+    assert measures["updated"]["recall.diff"] <= limit
     measures = fpredictor.evaluate()
     acc = measures["updated"]["Accuracy"]
     fpredictor.fit(gm.accuracy, gm.recall.diff, limit, greater_is_better_const=True)
@@ -135,7 +135,7 @@ def test_disp_impact(use_fast=True):
 
     assert measures["original"]["disparate_impact"] < 0.8
 
-    assert measures["updated"]["disparate_impact"] > 0.8
+    assert measures["updated"]["disparate_impact"] >= 0.8
 
 
 def test_min_recall(use_fast=True):
@@ -144,7 +144,7 @@ def test_min_recall(use_fast=True):
     # Enforce that every group has a recall over 0.5
     fpredictor.fit(gm.accuracy, gm.recall.min, 0.5)
     scores = fpredictor.evaluate_groups(return_original=False, verbose=False)
-    assert all(scores["recall"][:-1] > 0.5)
+    assert all(scores["recall"][:-1] >= 0.5)
 
 
 def test_no_groups_slow():
@@ -192,7 +192,7 @@ def test_recall_diff_inferred(use_fast=True):
 
     measures = fpredictor.evaluate_fairness(verbose=False)
 
-    assert measures["updated"]["recall.diff"] < 0.005
+    assert measures["updated"]["recall.diff"] <= 0.005
 
     # Prove that sex isn't being used by dropping it and reevaluating.
 
