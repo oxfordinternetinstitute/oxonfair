@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import sklearn.linear_model
 import oxonfair as fair
-import warnings
 from oxonfair.utils import group_metrics as gm
 
 classifier_type = sklearn.linear_model.LogisticRegression
@@ -90,7 +89,7 @@ def test_levelling_down(use_fast=True):
     cpredictor.fit(gm.accuracy, gm.specificity.min, 0.99, force_levelling_up=-1)
     assert cpredictor.evaluate(metrics={'a':gm.specificity.min})['updated'].iloc[0] >= 0.99
     cpredictor.fit(gm.accuracy, gm.recall.min, 0.99, force_levelling_up=-1)
-    assert cpredictor.evaluate(metrics={'a':gm.recall.min})['updated'].iloc[0] =< 0.99
+    assert cpredictor.evaluate(metrics={'a':gm.recall.min})['updated'].iloc[0] <= 0.99
 
 
 def test_levelling_down_slow():
@@ -102,10 +101,10 @@ def test_levelling_down_hybrid():
 
 def test_levelling_up(use_fast=True):
     cpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
-    cpredictor.fit(gm.accuracy, gm.specificity.min, 0.99, force_levelling_up=1)
-    assert cpredictor.evaluate(metrics={'a':gm.specificity.min})['updated'].iloc[0] =< 0.99
-    cpredictor.fit(gm.accuracy, gm.recall.min, 0.99, force_levelling_up=1)
-    assert cpredictor.evaluate(metrics={'a':gm.recall.min})['updated'].iloc[0] >= 0.99
+    cpredictor.fit(gm.accuracy, gm.specificity.min, 0.999, force_levelling_up=1)
+    assert cpredictor.evaluate(metrics={'a':gm.specificity.min})['updated'].iloc[0] <= 0.999
+    cpredictor.fit(gm.accuracy, gm.recall.min, 0.999, force_levelling_up=1)
+    assert cpredictor.evaluate(metrics={'a':gm.recall.min})['updated'].iloc[0] >= 0.999
 
 
 def test_levelling_up_slow():

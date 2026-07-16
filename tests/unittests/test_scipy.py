@@ -30,7 +30,7 @@ total_data = pd.get_dummies(total_data)
 def resample():
     global train, train_y, val, val_y, test, test_y, predictor
     global train_dict, val_dict, test_dict
-    global train_dict_g, val_dict_g, test_dict_g
+    global val_dict_g, test_dict_g
     train = total_data.sample(frac=0.5)
     val_test = total_data.drop(train.index)
     train_y = y.iloc[train.index]
