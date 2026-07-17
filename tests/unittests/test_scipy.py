@@ -30,7 +30,7 @@ total_data = pd.get_dummies(total_data)
 def resample():
     global train, train_y, val, val_y, test, test_y, predictor
     global train_dict, val_dict, test_dict
-    global train_dict_g, val_dict_g, test_dict_g
+    global val_dict_g, test_dict_g
     train = total_data.sample(frac=0.5)
     val_test = total_data.drop(train.index)
     train_y = y.iloc[train.index]
@@ -231,7 +231,7 @@ def test_disp_impact(use_fast=True):
 
     assert measures["original"]["disparate_impact"] < 0.9
 
-    assert measures["updated"]["disparate_impact"] > 0.9
+    assert measures["updated"]["disparate_impact"] >= 0.9
 
 
 def test_min_recall(use_fast=True):
@@ -443,7 +443,7 @@ def test_selection_rate_diff_levelling_up(use_fast=True):
 
     assert measures["updated"]["statistical_parity"] <= 0.025
 
-    fpredictor.fit(gm.accuracy, gm.pos_pred_rate.diff, 0.025, force_levelling_up='-')
+    fpredictor.fit(gm.accuracy, gm.pos_pred_rate.diff, 0.025, force_levelling_up=-1)
     rate = fpredictor.evaluate_groups(metrics={1: gm.pos_pred_rate}, verbose=False)[1]
     assert (rate['updated'].drop('Maximum difference') <= rate['original'].drop('Maximum difference')).all()
     # Evaluate the change in fairness (recall difference corresponds to EO)

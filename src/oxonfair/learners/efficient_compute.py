@@ -49,29 +49,24 @@ def compute_metric(
 
 def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: np.ndarray,
                additional_constraints: Sequence,
-               *, tol=1e-12, force_levelling_up=False) -> Tuple[np.ndarray, np.ndarray]:
-    """Modified from
-        https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
+               *, force_levelling_up=False) -> Tuple[np.ndarray, np.ndarray]:
+    """
         Returns Pareto efficient row subset of solutions and its associated weights
-        Direction if a vector that governs if the frontier should maximize or minimize each
+        Direction is a vector that governs if the frontier should maximize or minimize each
         direction.
         Where an element of direction is positive frontier maximizes, negative, it mimizes.
-
         parameters
         ----------
         solutions: a numpy array of values that are evaluated to find the frontier
         initial_weights: a numpy array of corresponding weights
         directions: a binary vector containing [+1,-1] indicating if greater or lower solutions are
             prefered
-        tol: a float indicating if points that are almost dominated (i.e. they are within tol of
-            another point in the frontier)  should be dropped.
-            This is used to eliminate ties, and to discard most of the constant classifiers.
         additional constrains: vector of floats of size frontier width - 2
             These are hard constraints any point will be discarded if
             solution[i+2]*direction<additional_constraints[i]*direction .
-        force_levelling_up: Either False, +1, or -1.
-            If false do nothing.
-            If +1 keep only weights that are non-negative.
+        force_levelling_up: Either True, False, +1, or -1.
+            If False do nothing.
+            If True or +1 keep only weights that are non-negative.
             If -1 keep only weights that are non-positive.
 
        returns
@@ -80,75 +75,63 @@ def keep_front(solutions: np.ndarray, initial_weights: np.ndarray, directions: n
             1. reduced set of solutions associated with the Pareto front
             2. reduced set of weights associated with the Pareto front
     """
+    front = solutions
 
-    front = solutions.T.copy()
-    weights = initial_weights.T.copy()
-    weights = weights.reshape(weights.shape[0], -1)  # handle both cases.
-    front *= directions[:front.shape[1]]
-    # drop all Nans/Inf
-    mask = np.isfinite(front).any(1)
-    front = front[mask]
-    weights = weights[mask]
-    # drop all points violating additional constraints.
+    # Keep points on the last axis as columns.
+    weights = initial_weights.reshape(-1, initial_weights.shape[-1])
+
+    # Work in the transformed objective space.
+    front *= directions[:front.shape[0], np.newaxis]
+
+    # Drop all NaNs/Inf.
+    mask = np.isfinite(front).any(axis=0)
+    front = front[:, mask]
+    weights = weights[:, mask]
+
+    # Drop all points violating additional constraints.
     for i, val in enumerate(additional_constraints):
-        mask = front[:, 2+i] >= val*directions[2+i]
-        front = front[mask]
-        weights = weights[mask]
+        mask = front[2 + i, :] >= val * directions[2 + i]
+        front = front[:, mask]
+        weights = weights[:, mask]
 
     if force_levelling_up:
-        if force_levelling_up == '-1':
-            mask = (weights <= 0).any(1)
+        if force_levelling_up == -1:
+            mask = (weights <= 0).any(axis=0)
         else:
-            mask = (weights <= 0).any(1)
-        front = front[mask]
-        weights = weights[mask]
+            mask = (weights >= 0).any(axis=0)
+        front = front[:, mask]
+        weights = weights[:, mask]
 
-    # drop all points worse than the extrema of the front
-    # NB we have ties so pick the best extrema
-    # This matters for replicability rather than performance
-    best0 = front[:, 0] == front[:, 0].max()
-    best1 = front[:, 1] == front[:, 1].max()
-    ext1 = front[best0, 1].max()
-    ext0 = front[best1, 0].max()
-    mask = np.greater_equal(front[:, 1], ext1)
-    mask *= np.greater_equal(front[:, 0], ext0)
-    front = front[mask]
-    weights = weights[mask]
-    # sort points by decreasing sum of coordinates
-    # Add 10**-8 * magnitude of w so that in the event of a near tie, pick points close to
-    # the mean first
-    mean = weights.mean(0)
-    modifier = -(10**-8) * np.abs(weights - mean).sum(1)
-    # code silently breaks if :2 is removed from front,
-    order = (front[:, :2].sum(1) + modifier).argsort(kind='stable')[::-1]
-    front = front[order]
-    weights = weights[order]
-    # initialize a boolean mask for currently undominated points
-    undominated = np.ones(front.shape[0], dtype=bool)
+    # Key idea is much simpler than the old code.
+    # Sort by component 0 of front
+    # Only keep the elements that improve in component 1 as you traverse the list
+    # This means they are bigger than the accumulated maxima
+    # Tedious details -- how do we handle ties
+    # For a tie in component 0, we pick the best value in component 1
+    # For a tie in components 0 and 1, this is probably a constant classifier and we pick the
+    # element with smallest weight norm so the coarse-to-fine grid search works better.
+    # Lexsort automatically gives this tie resolved order
+    wnorm = -np.linalg.norm(weights, axis=0)
+    big_front = np.concatenate((front[:2], wnorm[np.newaxis]), axis=0)
+    order = np.lexsort(big_front[::-1])[::-1]
 
-    for i in range(front.shape[0]):
-        size = front.shape[0]
-        # process each point in turn
-        if i >= size:
-            break
-        # find all points not dominated by i
-        # since points are sorted by coordinate sum
-        # i cannot dominate any points in 1,...,i-1
-        undominated[i] = True  # Bug fix missing from online version
-        undominated[i + 1:size] = (front[i + 1:size, :2] >= front[i, :2] + tol).any(1)
-        front = front[undominated[:size]]
-        weights = weights[undominated[:size]]
-
-    weights = weights.T
-    front *= directions[:front.shape[1]]
-    # front = front[:, :2]
-    front = front.T
-    order = (front[0]).argsort()
     front = front[:, order]
     weights = weights[:, order]
+
+    f = np.concatenate(((front[1, 0] - 1,), front[1, :-1]))
+    best_constraint = np.maximum.accumulate(f)
+    mask = front[1, :] > best_constraint
+    weights = weights[:, mask]
+    front = front[:, mask]
+
+    # Restore original objective signs and reverse the selected order.
+    weights = weights[:, ::-1]
+    front *= directions[:front.shape[0], np.newaxis]
+    front = front[:, ::-1]
+
     if initial_weights.ndim == 3:
-        weights = weights.reshape(initial_weights.shape[1], initial_weights.shape[0], -1)
-        weights = weights.transpose(1, 0, 2)
+        weights = weights.reshape(initial_weights.shape[0], initial_weights.shape[1], -1)
+
     return front, weights
 
 
@@ -164,7 +147,7 @@ def build_grid_inner(accum_count, mesh, groups):
     return acc
 
 
-def build_grid(accum_count: np.ndarray, bottom, top, metrics: Tuple[Callable],
+def build_grid(accum_count: List[np.ndarray], bottom, top, metrics: Tuple[Callable],
                *, steps=25) -> Tuple[np.ndarray, List[np.ndarray], np.ndarray]:
     """Part of efficient grid search.
     This uses the fact that metrics can be computed efficiently as a function of TP,FP,FN and TN.
@@ -200,7 +183,7 @@ def build_grid(accum_count: np.ndarray, bottom, top, metrics: Tuple[Callable],
     return score, mesh_indices, np.maximum(1, np.asarray(step))
 
 
-def build_grid2(accum_counts: Tuple[np.ndarray], bottom, top, metrics: Tuple[Callable],
+def build_grid2(accum_counts: Tuple[List[np.ndarray], List[np.ndarray]], bottom, top, metrics: Tuple[Callable],
                 *, steps=25) -> Tuple[np.ndarray, List[np.ndarray], np.ndarray]:
     """Part of efficient grid search.
     This uses the fact that metrics can be computed efficiently as a function of TP,FP,FN and TN.

@@ -78,7 +78,7 @@ class FairPredictor:
                  add_noise=False, logit_scaling=False,
                  use_fast=True, conditioning_factor=None, threshold=2/3) -> None:
         if predictor is None:
-            def predictor(x):
+            def predictor(x):  # type: ignore
                 return copy.deepcopy(x)
         if not is_not_autogluon(predictor) and predictor.problem_type != 'binary':
             logger.error('Fairpredictor only takes a binary predictor as input')
@@ -381,11 +381,11 @@ class FairPredictor:
         proba = proba[:, 0] - proba[:, 1]
 
         if force_levelling_up:  # Truncate search space
-            if force_levelling_up == '-':
+            if force_levelling_up == -1:
                 proba = np.minimum(proba,  -1e-6)
             else:
                 proba = np.maximum(proba, 0)
-        assert force_levelling_up in [False, '+', '-', True], 'force_levelling_up must be one of False, +, - or True'
+        assert force_levelling_up in [False, -1, +1, True], 'force_levelling_up must be one of False, -1, +1 or True'
 
         def call_slow(existing_weights=None):
             fix_obj = [fix_groups_and_conditioning(obj, self._internal_groups,
@@ -403,7 +403,7 @@ class FairPredictor:
                                                             initial_divisions=gw,
                                                             logit_scaling=self.logit_scaling,
                                                             existing_weights=existing_weights,
-                                                            additional_constraints=values)  # force_levelling_up=True)
+                                                            additional_constraints=values, force_levelling_up=force_levelling_up)
 
         def call_fast(grid_width=grid_width):
             if grid_width is False:

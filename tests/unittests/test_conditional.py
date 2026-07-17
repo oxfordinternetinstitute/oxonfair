@@ -111,7 +111,7 @@ def test_class(use_fast=True):
     fpredictor.plot_frontier()
     fpredictor.evaluate_fairness()
     score = fpredictor.evaluate_fairness(metrics=cgm.cond_disparities, verbose=False)
-    score["updated"]["pos_pred_rate_diff"] < 0.02
+    assert score["updated"]["pos_pred_rate_diff"] <= 0.02
     fpredictor.evaluate_groups()
     fpredictor.evaluate_groups(metrics=cgm.cond_measures)
 
@@ -134,7 +134,7 @@ def test_sklearn(use_fast=True):
     fpredictor.plot_frontier()
     fpredictor.evaluate_fairness()
     score = fpredictor.evaluate_fairness(metrics=cgm.cond_disparities, verbose=False)
-    score["updated"]["pos_pred_rate_diff"] < 0.02
+    score["updated"]["pos_pred_rate_diff"] <= 0.02
     fpredictor.evaluate_groups()
     fpredictor.evaluate_groups(metrics=cgm.cond_measures)
 

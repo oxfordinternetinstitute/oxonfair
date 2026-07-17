@@ -80,3 +80,35 @@ def test_active_constraints_slow():
 
 def test_active_constraints_hybrid():
     test_active_constraints('hybrid')
+
+
+def test_levelling_down(use_fast=True):
+    """Check correct behaviour
+    Only min specificity and not min recall should be enforcable with levelling down on"""
+    cpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
+    cpredictor.fit(gm.accuracy, gm.specificity.min, 0.99, force_levelling_up=-1)
+    assert cpredictor.evaluate(metrics={'a':gm.specificity.min})['updated'].iloc[0] >= 0.99
+    cpredictor.fit(gm.accuracy, gm.recall.min, 0.99, force_levelling_up=-1)
+    assert cpredictor.evaluate(metrics={'a':gm.recall.min})['updated'].iloc[0] <= 0.99
+
+
+def test_levelling_down_slow():
+    test_levelling_down(False)
+
+
+def test_levelling_down_hybrid():
+    test_levelling_down('hybrid')
+
+def test_levelling_up(use_fast=True):
+    cpredictor = fair.FairPredictor(predictor, test_dict, "sex_ Female", use_fast=use_fast)
+    cpredictor.fit(gm.accuracy, gm.specificity.min, 0.999, force_levelling_up=1)
+    assert cpredictor.evaluate(metrics={'a':gm.specificity.min})['updated'].iloc[0] <= 0.999
+    cpredictor.fit(gm.accuracy, gm.recall.min, 0.999, force_levelling_up=1)
+    assert cpredictor.evaluate(metrics={'a':gm.recall.min})['updated'].iloc[0] >= 0.999
+
+
+def test_levelling_up_slow():
+    test_levelling_up(False)
+
+def test_levelling_up_hybrid():
+    test_levelling_up('hybrid')

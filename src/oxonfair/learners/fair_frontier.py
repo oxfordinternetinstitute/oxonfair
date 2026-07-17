@@ -9,6 +9,7 @@ try:
     from autogluon.core.metrics import Scorer
 except ModuleNotFoundError:
     AUTOGLUON_EXISTS = False
+    Scorer = False
 
 
 def compute_metric(metric: Callable, y_true: np.ndarray, proba: np.ndarray,
@@ -81,9 +82,6 @@ def sort_by_front(front: np.ndarray, weights: np.ndarray) -> Tuple[np.ndarray, n
     weights = weights[:, :, sort_ind]
     front = front[:, sort_ind]
     return front, weights
-
-# Solution modified from here:
-# https://stackoverflow.com/questions/32791911/fast-calculation-of-pareto-front-in-python
 
 
 def linear_interpolate(front: np.ndarray, weights: np.ndarray, gap: float = 0.01) -> np.ndarray:
@@ -243,6 +241,7 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
                                        logit_scaling=logit_scaling)
     front = front_from_weights(weights, y_true, proba, groups_infered, metrics)
     front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
+
     # second stage
     mins = weights[:, :-1].min(-1)  # drop zeros
     maxs = weights[:, :-1].max(-1)
@@ -261,6 +260,7 @@ def build_coarse_to_fine_front(metrics: Sequence[Callable],
         front = np.concatenate((existing_front, front), -1)
 
     front, weights = keep_front(front, weights, directions, additional_constraints, force_levelling_up=force_levelling_up)
+
     for _ in range(nr_of_recursive_calls - 1):
         if weights.shape[-1] != 1:
             eps /= refinement_factor
